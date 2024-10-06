@@ -1,0 +1,11 @@
+-- CreateTable
+CREATE TABLE "Pairing" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "player1Id" INTEGER NOT NULL,
+    "player2Id" INTEGER,
+    "wagerAmount" INTEGER NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Pairing_player1Id_fkey" FOREIGN KEY ("player1Id") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Pairing_player2Id_fkey" FOREIGN KEY ("player2Id") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
