@@ -16,23 +16,21 @@ export default function GameComponent({ game }: { game: any }) {
     const { getSmartContract } = useSmartContract(); // Hook to access the smart contract
 
     useEffect(() => {
-        if (id) {
-            fetchGameEscrowBalance(id as string); // Fetch the balance specific to this game
+        if (game.contractGameId) {
+            fetchGameEscrowBalance(game.contractGameId); // Fetch the balance using contractGameId
         }
-    }, [id, gameBalance]);
+    }, [game.contractGameId, gameBalance]);
 
     // Fetch the balance for the specific game from the escrow
-    const fetchGameEscrowBalance = async (gameId: string) => {
+    const fetchGameEscrowBalance = async (contractGameId: string) => {
         try {
             const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
             if (!chessBettingContract) {
                 console.error("ChessBetting contract not found");
                 return;
             }
-            const balance = await chessBettingContract.escrow(gameId);
+            const balance = await chessBettingContract.escrow(contractGameId); // Use contractGameId
             setGameBalance(ethers.formatUnits(balance, "ether"));
-            // Trigger a re-render
-            setGameBalance((prev) => prev);  // This forces React to recognize the change
         } catch (error) {
             console.error("Error fetching game balance:", error);
         }
@@ -49,7 +47,7 @@ export default function GameComponent({ game }: { game: any }) {
 
     return (
         <div>
-            <h1>Game {id}</h1>
+            <h1>Game {game.contractGameId}</h1>
             <div className={styles.gameContainer}>
                 <Chessboard
                     position={position || game.initialPosition}

@@ -4,7 +4,7 @@ import { IDeployedNetworkConstantJson, ISmartContractsConstantJson } from "@/typ
 import { useEffect, useState } from "react";
 
 /**
- * 
+ *
  * @returns @description Contains data and methods to interact with smart contract
  */
 export const useSmartContract = () => {

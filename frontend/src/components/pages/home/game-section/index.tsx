@@ -236,17 +236,25 @@ export default function GameSection() {
             const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
             if (!chessBettingContract) return;
 
+            const filter = chessBettingContract.filters.EscrowDeposit();
+            const pastEvents = await chessBettingContract.queryFilter(filter);
+
+            // Handle past events (if any)
+            pastEvents.forEach((event) => {
+                console.log(`Past EscrowDeposit event for Game ID: ${event.args.gameId.toString()}`);
+                console.log(`Player: ${event.args.player}, Amount: ${ethers.formatUnits(event.args.amount, "ether")} ETH`);
+            });
+
+            // Listen to future events
             chessBettingContract.on("EscrowDeposit", (gameId, player, amount) => {
                 console.log(`EscrowDeposit event detected for Game ID: ${gameId.toString()}`);
                 console.log(`Player: ${player}, Amount: ${ethers.formatUnits(amount, "ether")} ETH`);
-
-                // Re-fetch the games to update the UI
-                syncGames();
+                syncGames(); // Update the games list after detecting the event
             });
 
             setIsListening(true); // Set listening flag to true
         } catch (error) {
-            console.error("Error listening to EscrowDeposit events:", error);
+            console.error("Error listening: to EscrowDeposit events:", error);
         }
     };
 
