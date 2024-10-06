@@ -19,14 +19,20 @@ export default function GameComponent({ game }: { game: any }) {
         if (id) {
             fetchGameEscrowBalance(id as string); // Fetch the balance specific to this game
         }
-    }, [id]);
+    }, [id, gameBalance]);
 
     // Fetch the balance for the specific game from the escrow
     const fetchGameEscrowBalance = async (gameId: string) => {
         try {
-            const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING"); // Get the smart contract instance
-            const balance = await chessBettingContract.escrow(gameId); // Fetch the escrow balance for the game
-            setGameBalance(ethers.formatUnits(balance, "ether")); // Format the balance and set it
+            const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
+            if (!chessBettingContract) {
+                console.error("ChessBetting contract not found");
+                return;
+            }
+            const balance = await chessBettingContract.escrow(gameId);
+            setGameBalance(ethers.formatUnits(balance, "ether"));
+            // Trigger a re-render
+            setGameBalance((prev) => prev);  // This forces React to recognize the change
         } catch (error) {
             console.error("Error fetching game balance:", error);
         }

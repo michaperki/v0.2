@@ -15,6 +15,7 @@ contract ChessBetting {
     event GameCreated(uint256 gameId, address creator, uint256 wagerAmount);
     event GameJoined(uint256 gameId, address player);
     event GameResult(uint256 gameId, address winner, uint256 payoutAmount);
+    event EscrowDeposit(uint256 gameId, address player, uint256 amount);
 
     // Storage
     mapping(uint256 => Game) public games; // Mapping of gameId to Game
@@ -42,29 +43,26 @@ contract ChessBetting {
     function createGame(uint256 wagerAmount) external payable {
         require(msg.value == wagerAmount, "Incorrect wager amount");
 
-        // Create a new game in memory to minimize storage writes
-        Game memory newGame;
+        // Create a new game in storage
+        Game storage newGame = games[gameCounter];
         newGame.wagerAmount = wagerAmount;
         newGame.timestamp = block.timestamp;
         newGame.winner = address(0);
         newGame.isActive = false;
 
-        // Add the creator as the first participant
-        address;
-        participants[0] = msg.sender;
-        newGame.participants = participants;
-
-        // Store the game into storage
-        games[gameCounter] = newGame;
+        // Add the creator as the first participant using push (now it's in storage)
+        newGame.participants.push(msg.sender);
 
         // Store the funds in escrow
         escrow[gameCounter] = msg.value;
 
         emit GameCreated(gameCounter, msg.sender, wagerAmount);
+        emit EscrowDeposit(gameCounter, msg.sender, msg.value);
 
         // Increment game counter
         gameCounter++;
-}
+    }
+
     /**
      * @dev Join an existing game
      * @param gameId The ID of the game to join
@@ -85,6 +83,7 @@ contract ChessBetting {
         game.isActive = true;
 
         emit GameJoined(gameId, msg.sender);
+        emit EscrowDeposit(gameId, msg.sender, msg.value);
     }
 
     /**

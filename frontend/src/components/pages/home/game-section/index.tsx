@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { useRouter } from 'next/router'; // Import useRouter for navigation
@@ -14,11 +13,13 @@ export default function GameSection() {
     const { walletConnectionStatus, switchNetwork, chainCurrent } = useWallet();
     const [error, setError] = useState("");
     const [isSending, setIsSending] = useState(false);
+    const [isListening, setIsListening] = useState(false); // To prevent adding multiple listeners
     const router = useRouter(); // Initialize router for navigation
 
     useEffect(() => {
         if (walletConnectionStatus === "connected") {
             syncGames();
+            listenToEscrowDepositEvents(); // Start listening for EscrowDeposit events
         }
     }, [walletConnectionStatus]);
 
@@ -193,7 +194,6 @@ export default function GameSection() {
                 const allGames = await chessBettingContract.getAllGames();
                 console.log("All games from contract:", allGames);
 
-
                 // Iterate over each contract game and extract its data
                 const formattedGames = gamesFromDb.map((dbGame) => {
                     // Find the corresponding game in the contract by matching contractGameId
@@ -225,6 +225,28 @@ export default function GameSection() {
         } catch (e) {
             console.error(e);
             setError("Failed to sync all games");
+        }
+    };
+
+    // Event listener for the EscrowDeposit event
+    const listenToEscrowDepositEvents = async () => {
+        if (isListening) return; // Prevent duplicate listeners
+
+        try {
+            const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
+            if (!chessBettingContract) return;
+
+            chessBettingContract.on("EscrowDeposit", (gameId, player, amount) => {
+                console.log(`EscrowDeposit event detected for Game ID: ${gameId.toString()}`);
+                console.log(`Player: ${player}, Amount: ${ethers.formatUnits(amount, "ether")} ETH`);
+
+                // Re-fetch the games to update the UI
+                syncGames();
+            });
+
+            setIsListening(true); // Set listening flag to true
+        } catch (error) {
+            console.error("Error listening to EscrowDeposit events:", error);
         }
     };
 
@@ -280,4 +302,3 @@ export default function GameSection() {
         </div>
     );
 }
-
