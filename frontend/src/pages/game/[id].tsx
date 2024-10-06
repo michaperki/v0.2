@@ -13,16 +13,16 @@ export default function GamePage({ game }: { game: any }) {
 
 export const getStaticPaths: GetStaticPaths = async () => {
     const games = await prisma.game.findMany({
-        select: { id: true },
+        select: { id: true }, // Ensure this `id` matches the DB field, e.g., `contractGameId`
     });
 
     const paths = games.map((game) => ({
-        params: { id: game.id.toString() },
+        params: { id: game.id.toString() }, // Ensure it's a string
     }));
 
     return {
         paths,
-        fallback: 'blocking',
+        fallback: 'blocking', // Use blocking fallback for dynamic data
     };
 };
 
@@ -30,16 +30,15 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
     const { id } = params as { id: string };
 
     const game = await prisma.game.findUnique({
-        where: { id: parseInt(id, 10) },
+        where: { id: parseInt(id, 10) }, // Ensure `id` is parsed correctly
     });
 
     if (!game) {
         return {
-            notFound: true,
+            notFound: true, // Handle 404 if the game isn't found
         };
     }
 
-    // Serialize the Date fields (createdAt and updatedAt)
     return {
         props: {
             game: {

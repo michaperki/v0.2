@@ -183,7 +183,13 @@ export default function GameSection() {
             if (walletConnectionStatus === "connected" && chessBettingContract) {
                 const allGames = await chessBettingContract.getAllGames();
                 console.log("All games:", allGames);
-                setGames(allGames);
+                const formattedGames = allGames.map((game, index) => ({
+                    wagerAmount: game.wagerAmount,
+                    isActive: game.isActive,
+                    participants: game.participants,
+                    contractGameId: Number(index) + 1
+                }));
+                setGames(formattedGames);
             }
         } catch (e) {
             console.error(e);
@@ -221,6 +227,7 @@ export default function GameSection() {
                 {games.map((game, index) => (
                     <li key={index}>
                         <p>Game ID: {index}</p>
+                        <p>Game contract id: {game.contractGameId}</p>
                         {game.participants.map((participant, idx) => (
                             <p key={idx}>Player {idx + 1}: {participant}</p>
                         ))}
@@ -232,7 +239,7 @@ export default function GameSection() {
                         )}
 
                         {game.isActive && (
-                            <button onClick={() => router.push(`/game/${index}`)}>
+                            <button onClick={() => router.push(`/game/${game.contractGameId}`)}>
                                 Go to Game
                             </button>
                         )}

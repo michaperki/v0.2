@@ -8,19 +8,12 @@ import { useSmartContract } from '@/hooks/useSmartContract'; // Hook to get the 
 import styles from './styles.module.css';
 import { ChessBetting } from '@/types/typechain-types'; // Assuming you have ChessBetting types available
 
-export default function GameComponent() {
+export default function GameComponent({ game }: { game: any }) {
     const router = useRouter();
     const { id } = router.query; // Game ID from URL
-    const [game, setGame] = useState<any>(null);
     const [position, setPosition] = useState<string | null>(null);
     const [contractBalance, setContractBalance] = useState<string>(""); // State for contract balance
     const { getSmartContract } = useSmartContract(); // Hook to access the smart contract
-
-    useEffect(() => {
-        if (id) {
-            fetchGameDetails(id as string);
-        }
-    }, [id]);
 
     useEffect(() => {
         if (id) {
@@ -28,26 +21,12 @@ export default function GameComponent() {
         }
     }, [id]);
 
-    // Fetch game details by ID
-    const fetchGameDetails = async (id: string) => {
-        try {
-            const response = await fetch(`/api/games/${id}`);
-            if (!response.ok) {
-                throw new Error("Failed to fetch game details");
-            }
-            const data = await response.json();
-            setGame(data);
-        } catch (error) {
-            console.error("Error fetching game details:", error);
-        }
-    };
-
     // Fetch the balance of the smart contract
     const fetchContractBalance = async () => {
         try {
             const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING"); // Get the smart contract
             const provider = new ethers.BrowserProvider(window.ethereum); // Provider to interact with Ethereum
-            const balance = await provider.getBalance(chessBettingContract.address); // Get balance
+            const balance = await provider.getBalance(chessBettingContract.target); // Get balance
             setContractBalance(ethers.formatUnits(balance, "ether")); // Format the balance and set it
         } catch (error) {
             console.error("Error fetching contract balance:", error);
@@ -85,4 +64,3 @@ export default function GameComponent() {
         </div>
     );
 }
-
