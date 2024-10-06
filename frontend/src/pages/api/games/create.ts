@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ error: "Missing required fields" });
         }
 
-        const adjustedGameId = parseInt(contractGameId) + 1; // Increment the game ID by 1
+        const adjustedGameId = parseInt(contractGameId); // Increment the game ID by 1
 
         // Create the game entry in the Game table
         const newGame = await prisma.game.create({

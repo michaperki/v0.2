@@ -64,7 +64,9 @@ export default function GameSection() {
             const gameCreatedEvent = receipt.logs.find((log) => log.fragment.name === "GameCreated");
 
             if (gameCreatedEvent) {
+                console.log("GameCreated event found");
                 const contractGameId = gameCreatedEvent.args[0]; // '0' is the gameId
+                console.log("Game ID (Game Counter):", contractGameId.toString());
                 const creatorAddress = gameCreatedEvent.args[1]; // '1' is the creator address
                 const wagerAmount = ethers.formatUnits(gameCreatedEvent.args[2], "ether"); // '2' is the wager amount
 
@@ -90,6 +92,8 @@ export default function GameSection() {
                     throw new Error("Failed to create game in the database");
                 }
 
+                const { gameId } = await response.json();
+
                 syncGames(); // Refresh the games list
                 setWagerToPost(""); // Clear input
 
@@ -104,7 +108,7 @@ export default function GameSection() {
         }
     };
 
-    const joinGame = async (gameIndex: number) => {
+    const joinGame = async (contractGameId: number) => {
         setError("");
         const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
 
@@ -123,12 +127,13 @@ export default function GameSection() {
 
             setIsSending(true);
 
-            const game = games[gameIndex];
+            const game = games.find(game => game.contractGameId === contractGameId);
             if (!game) {
                 throw new Error("Game not found");
             }
 
             const wagerAmountInWei = ethers.parseUnits(game.wagerAmount.toString(), "wei");
+            console.log("Wager amount in wei:", wagerAmountInWei.toString());
 
             // Get the nonce for the transaction to prevent the nonce issue
             const provider = new ethers.BrowserProvider(window.ethereum);
@@ -137,8 +142,8 @@ export default function GameSection() {
 
             console.log("Current nonce:", nonce);
 
-            // Step 1: Call smart contract to join the game
-            const tx = await chessBettingContract.joinGame(gameIndex, {
+            // Step 1: Call smart contract to join the game using the correct contract game ID
+            const tx = await chessBettingContract.joinGame(contractGameId, {
                 value: wagerAmountInWei,
                 nonce: nonce, // Set the nonce manually to avoid the mismatch
             });
@@ -146,19 +151,15 @@ export default function GameSection() {
 
             console.log("Join game transaction receipt:", receipt);
 
-            // Step 2: Convert the game index (contractGameId) and wagerAmountInWei to numbers
-            const contractGameIdNumber = Number(gameIndex);
-            const wagerAmountNumber = Number(wagerAmountInWei);
-
-            // Step 3: Call the backend API to update the game in the database
+            // Step 2: Call the backend API to update the game in the database
             const response = await fetch("/api/games/join", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    contractGameId: contractGameIdNumber,
-                    wagerAmount: wagerAmountNumber,
+                    contractGameId,
+                    wagerAmount: Number(wagerAmountInWei),
                 }),
             });
 
@@ -181,15 +182,45 @@ export default function GameSection() {
 
         try {
             if (walletConnectionStatus === "connected" && chessBettingContract) {
+                // Fetch games from Prisma (DB)
+                const response = await fetch('/api/games');
+                if (!response.ok) {
+                    throw new Error("Failed to fetch games from the database");
+                }
+                const gamesFromDb = await response.json(); // Games from the database
+
+                // Fetch all games from the smart contract
                 const allGames = await chessBettingContract.getAllGames();
-                console.log("All games:", allGames);
-                const formattedGames = allGames.map((game, index) => ({
-                    wagerAmount: game.wagerAmount,
-                    isActive: game.isActive,
-                    participants: game.participants,
-                    contractGameId: Number(index) + 1
-                }));
-                setGames(formattedGames);
+                console.log("All games from contract:", allGames);
+
+
+                // Iterate over each contract game and extract its data
+                const formattedGames = gamesFromDb.map((dbGame) => {
+                    // Find the corresponding game in the contract by matching contractGameId
+                    const contractGame = allGames.find((game, index) => {
+                        const contractGameId = index;  // This should match the contractGameId from the smart contract
+                        return contractGameId === dbGame.contractGameId;
+                    });
+
+                    if (!contractGame) {
+                        console.warn(`Contract game not found for contractGameId: ${dbGame.contractGameId}`);
+                        return null;
+                    }
+
+                    // Ensure the wager amount is correctly converted from wei to ether
+                    const wagerAmountInEther = ethers.formatUnits(contractGame[1], "wei");
+
+                    // Extract and map contract game data
+                    return {
+                        id: dbGame.id, // Use the actual Prisma game ID for navigation
+                        contractGameId: dbGame.contractGameId, // Contract game ID
+                        wagerAmount: wagerAmountInEther, // Wager amount in ETH
+                        isActive: contractGame[4], // Is game active?
+                        participants: contractGame[0].map((participant: any) => participant.toString()) // Convert participants to readable format
+                    };
+                }).filter(game => game !== null); // Filter out any unmatched games
+
+                setGames(formattedGames); // Set the games state
             }
         } catch (e) {
             console.error(e);
@@ -226,7 +257,7 @@ export default function GameSection() {
             <ul className={styles.gameList}>
                 {games.map((game, index) => (
                     <li key={index}>
-                        <p>Game ID: {index}</p>
+                        <p>Game ID: {game.id}</p>
                         <p>Game contract id: {game.contractGameId}</p>
                         {game.participants.map((participant, idx) => (
                             <p key={idx}>Player {idx + 1}: {participant}</p>
@@ -235,11 +266,11 @@ export default function GameSection() {
                         <p>Status: {game.isActive ? "Active" : "Not active"}</p>
 
                         {!game.isActive && game.participants.length < 2 && (
-                            <button onClick={() => joinGame(index)}>Join Game</button>
+                            <button onClick={() => joinGame(game.contractGameId)}>Join Game</button>
                         )}
 
                         {game.isActive && (
-                            <button onClick={() => router.push(`/game/${game.contractGameId}`)}>
+                            <button onClick={() => router.push(`/game/${game.id}`)}>
                                 Go to Game
                             </button>
                         )}

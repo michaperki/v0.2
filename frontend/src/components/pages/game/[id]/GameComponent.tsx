@@ -12,24 +12,23 @@ export default function GameComponent({ game }: { game: any }) {
     const router = useRouter();
     const { id } = router.query; // Game ID from URL
     const [position, setPosition] = useState<string | null>(null);
-    const [contractBalance, setContractBalance] = useState<string>(""); // State for contract balance
+    const [gameBalance, setGameBalance] = useState<string>(""); // State for the specific game's escrow balance
     const { getSmartContract } = useSmartContract(); // Hook to access the smart contract
 
     useEffect(() => {
         if (id) {
-            fetchContractBalance();
+            fetchGameEscrowBalance(id as string); // Fetch the balance specific to this game
         }
     }, [id]);
 
-    // Fetch the balance of the smart contract
-    const fetchContractBalance = async () => {
+    // Fetch the balance for the specific game from the escrow
+    const fetchGameEscrowBalance = async (gameId: string) => {
         try {
-            const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING"); // Get the smart contract
-            const provider = new ethers.BrowserProvider(window.ethereum); // Provider to interact with Ethereum
-            const balance = await provider.getBalance(chessBettingContract.target); // Get balance
-            setContractBalance(ethers.formatUnits(balance, "ether")); // Format the balance and set it
+            const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING"); // Get the smart contract instance
+            const balance = await chessBettingContract.escrow(gameId); // Fetch the escrow balance for the game
+            setGameBalance(ethers.formatUnits(balance, "ether")); // Format the balance and set it
         } catch (error) {
-            console.error("Error fetching contract balance:", error);
+            console.error("Error fetching game balance:", error);
         }
     };
 
@@ -59,8 +58,9 @@ export default function GameComponent({ game }: { game: any }) {
             <div className={styles.gameInfo}>
                 <div>Wager Amount: {game.wagerAmount}</div>
                 <div>Active: {game.isActive.toString()}</div>
-                <div>Contract Balance: {contractBalance} ETH</div> {/* Display contract balance */}
+                <div>Game Balance (Escrow): {gameBalance} ETH</div> {/* Display game-specific balance */}
             </div>
         </div>
     );
 }
+
