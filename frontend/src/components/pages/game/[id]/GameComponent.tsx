@@ -127,12 +127,12 @@ export default function GameComponent({ game }: { game: any }) {
     };
 
     return (
-        <div>
-            <h1>Game {game.contractGameId || "Pending"}</h1>
+        <div className={styles.gameContainer}>
+            <h1 className={styles.header}>Game {game.contractGameId || "Pending"}</h1>
             <div className={styles.gameInfo}>
-                <div>Wager Amount: {game.wagerAmount} ETH</div>
-                <div>Game Balance: {gameBalance} ETH</div> {/* Display game balance */}
-                <button onClick={depositFunds} disabled={isDepositing}>
+                <div className={styles.info}>Wager Amount: {game.wagerAmount} ETH</div>
+                <div className={styles.info}>Game Balance: {gameBalance} ETH</div> {/* Display game balance */}
+                <button className={styles.button} onClick={depositFunds} disabled={isDepositing}>
                     {isDepositing ? "Depositing..." : "Join Game"}
                 </button>
                 {error && <div className={styles.error}>{error}</div>}

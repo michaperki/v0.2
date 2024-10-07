@@ -15,6 +15,7 @@ interface WebSocketConnection {
   hasDeposited: boolean;
   isExecuting: boolean; // Flag to prevent simultaneous execution
   contractCreated: boolean; // Flag to prevent creating a contract more than once
+  fundsDistributed: boolean; // Flag to prevent distributing funds more than once
 }
 
 // Create HTTP server
@@ -100,7 +101,7 @@ wss.on('connection', (ws, req) => {
 
   let connection = connections.find((conn) => conn.playerId === playerId && conn.gameId === gameId);
   if (!connection) {
-    connection = { playerId, gameId, ws, hasDeposited: false, isConnected: true, isExecuting: false, contractCreated: false };
+    connection = { playerId, gameId, ws, hasDeposited: false, isConnected: true, isExecuting: false, contractCreated: false, fundsDistributed: false };
     connections.push(connection);
     console.log(`New player connected: Player ID: ${playerId}, Game ID: ${gameId}`);
   } else {
@@ -238,7 +239,7 @@ const handleGameEvent = async (gameId: string, event: any) => {
       // Notify players that the game has finished
       broadcastToGame(gameId, { type: 'game-finished', gameId, result: event });
       // Handle game finalization logic like updating the database, managing payouts, etc.
-      await finalizeGame(gameId, event);
+      await triggerFundDistribution(gameId, event);
       break;
 
     default:
@@ -247,14 +248,74 @@ const handleGameEvent = async (gameId: string, event: any) => {
   }
 };
 
-// Finalizes the game after it finishes
-const finalizeGame = async (gameId: string, event: any) => {
+// New fund distribution logic
+const triggerFundDistribution = async (gameId: string, event: any) => {
+  const connection = connections.find(conn => conn.gameId === gameId);
+  if (!connection) return;
+
+  // Check if already executing or distribution done
+  if (connection.isExecuting || connection.fundsDistributed) {
+    console.log(`Fund distribution already in progress or completed for game ${gameId}`);
+    return;
+  }
+
+  connection.isExecuting = true;
+
   try {
-    console.log(`Finalizing game ${gameId}`);
-    // Add any post-game logic here, like updating the game status in the database
-    console.log(`Game ${gameId} finalized.`);
+    let winner: string | null = null;
+    // Determine the winner based on event.statusName and players
+    const winnerColor = await fetchGameDetails(event.id); // Use event.id to get the game ID
+    if (winnerColor === 'white') {
+      winner = event.players.white.userId;
+    } else if (winnerColor === 'black') {
+      winner = event.players.black.userId;
+    }
+
+    if (!winner) {
+      throw new Error('Unable to determine the winner.');
+    }
+
+    console.log(`Distributing funds for game ${gameId} to winner ${winner}`);
+
+    // Sending distribution request to internal API
+    const response = await fetch('http://localhost:3000/api/games/distributeFunds', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gameId,
+        winnerLichessId: winner, // Pass the determined winner
+      }),
+    });
+
+    if (!response.ok) throw new Error('Failed to distribute funds');
+
+    connection.fundsDistributed = true;  // Mark as distributed
+    console.log(`Funds successfully distributed for game ${gameId}`);
   } catch (error) {
-    console.error(`Error finalizing game ${gameId}:`, error);
+    console.error('Error distributing funds:', error);
+  } finally {
+    connection.isExecuting = false;
+  }
+};
+
+
+const fetchGameDetails = async (lichessGameId: string) => {
+  const lichessApiUrl = `https://lichess.org/api/game/${lichessGameId}`;
+  const headers = {
+    Authorization: `Bearer ${process.env.LICHESS_TOKEN}`,
+  };
+
+  try {
+    const response = await fetch(lichessApiUrl, { headers });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch game details: ${response.statusText}`);
+    }
+
+    const gameDetails = await response.json();
+    return gameDetails.winner; // This will be either 'white' or 'black'
+  } catch (error) {
+    console.error('Error fetching game details:', error);
+    throw error;
   }
 };
 

@@ -5,7 +5,7 @@ export default function InfoSection() {
         <div className={styles.infoSection}>
             <div className={styles.infoSectionInner}>
                 <h2 className={styles.heading}>
-                    Important Information for Developers
+                    Play Blitz Like Never Before
                 </h2>
 
                 <hr className={styles.divider} />
@@ -14,46 +14,36 @@ export default function InfoSection() {
                     {/** Blockchain running */}
                     <li className={styles.listItem}>
                         <h3 className={styles.heading}>
-                            1. Local test blockchain
+                            1. Connect your wallet
                         </h3>
 
                         <p className={styles.text}>
-                            A local test blockchain is running, accessible at HTTP-RPC endpoint <u>http://localhost:8545</u>.
+                            Connect your wallet to start playing. You can connect your wallet by clicking the &quot;Connect Wallet&quot; button above.
                         </p>
                     </li>
 
                     {/** Frontend running */}
                     <li className={styles.listItem}>
                         <h3 className={styles.heading}>
-                            2. Local test frontend server
+                            2. Authenticate your lichess account
                         </h3>
 
                         <p className={styles.text}>
-                            A local test frontend server is running, accessible at <u>http://localhost:3000</u> (you&apos;re seeing this right now).
+                            Authenticate your Lichess account by clicking the &quot;Login to Lichess&quot; button.
                         </p>
                     </li>
 
                     {/** Modify Frontend */}
                     <li className={styles.listItem}>
                         <h3 className={styles.heading}>
-                            3. Modifying frontend
+                            3. Find an opponent
                         </h3>
 
                         <p className={styles.text}>
-                            To start modifying the frontend, edit <code>./frontend/src/pages/index.tsx</code>.
+                            Once you have authenticated your Lichess account, you can start playing against other players. You can find an opponent by entering your wager and clicking the &quot;Find Opponent&quot; button.
                         </p>
                     </li>
 
-                    {/** Modify Smart contracts */}
-                    <li className={styles.listItem}>
-                        <h3 className={styles.heading}>
-                            4. Modifying smart contracts
-                        </h3>
-
-                        <p className={styles.text}>
-                            To start modifying the smart contracts, add your contracts in <code>./smart-contracts/contracts</code>, and update the deploy scripts in <code>./smart-contracts/scripts</code>.
-                        </p>
-                    </li>
                 </ul>
             </div>
         </div>
