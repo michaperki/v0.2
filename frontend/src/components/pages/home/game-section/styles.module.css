@@ -1,9 +1,96 @@
-.game-section {
+.gameSection {
     display: flex;
-    gap: 10px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
 }
 
 .error {
     color: red;
+    font-size: 1.5rem;
+}
+
+.loading {
+    font-size: 1.5rem;
+}
+
+.createGame {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.createGame .heading {
+    font-size: 1.5rem;
+}
+
+.createGame .divider {
+    width: 100%;
+    height: 1px;
+    background-color: #e0e0e0;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.createGame .input {
+    width: 100%;
+    height: 40px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 0 10px;
+    margin-top: 10px;
+}
+
+.createGame .btn {
+    width: 100%;
+    height: 40px;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff;
+    color: white;
+    font-size: 1rem;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.createGame .btn:hover {
+    background-color: #0056b3;
+}
+
+.gameList {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.gameList .list {
+    width: 100%;
+    list-style-type: none;
+}
+
+.gameList .listItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.gameList .heading {
+    font-size: 1.5rem;
+}
+
+.gameList .divider {
+    width: 100%;
+    height: 1px;
+    background-color: #e0e0e0;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 

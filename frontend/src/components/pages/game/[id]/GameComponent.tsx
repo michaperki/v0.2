@@ -19,6 +19,42 @@ export default function GameComponent({ game }: { game: any }) {
     const [gameOver, setGameOver] = useState<boolean>(false);
     const [winner, setWinner] = useState<string | null>(null);
 
+    const [socket, setSocket] = useState<WebSocket | null>(null);
+
+    useEffect(() => {
+        const ws = new WebSocket('ws://localhost:3000'); // Connect to the WebSocket server
+        setSocket(ws);
+
+        ws.onopen = () => {
+            console.log('Connected to WebSocket server');
+            ws.send(JSON.stringify({ message: 'Connected to WebSocket server' }));
+        };
+
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            console.log('Received message:', message);
+
+            switch (message.type) {
+                case 'move':
+                    handleMove(message.move);
+                    break;
+                case 'game-over':
+                    setGameOver(true);
+                    setWinner(message.winner);
+                    break;
+                default:
+                    console.log('Unknown message type');
+            }
+        };
+
+        setSocket(ws);
+
+        return () => {
+            ws.close();
+        };
+    }, []);
+
+
     useEffect(() => {
         if (game.contractGameId) {
             fetchGameEscrowBalance(game.contractGameId); // Fetch the balance using contractGameId

@@ -75,9 +75,10 @@ export default function LichessSection() {
 
   return (
     <div className={styles.lichessSection}>
-      <div className={styles.lichessInnerSection}>
+      <div className={styles.lichessSectionInner}>
         <h1>{lichessData.username}</h1>
         <p>Rating: {lichessData.perfs.rapid.rating}</p>
+        <div className={styles.divider} />
       </div>
     </div>
   );
