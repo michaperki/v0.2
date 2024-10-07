@@ -1,5 +1,4 @@
 
-// components/pages/game/[id]/GameComponent.tsx
 import { useEffect, useState } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { useRouter } from 'next/router';
@@ -14,6 +13,9 @@ export default function GameComponent({ game }: { game: any }) {
     const [position, setPosition] = useState<string | null>(null);
     const [gameBalance, setGameBalance] = useState<string>(""); // State for the specific game's escrow balance
     const { getSmartContract } = useSmartContract(); // Hook to access the smart contract
+    const [lichessGameId, setLichessGameId] = useState<string | null>(game.lichessGameId);
+    const [player1Username, setPlayer1Username] = useState<string | null>(null);
+    const [player2Username, setPlayer2Username] = useState<string | null>(null);
 
     useEffect(() => {
         if (game.contractGameId) {
@@ -33,6 +35,55 @@ export default function GameComponent({ game }: { game: any }) {
             setGameBalance(ethers.formatUnits(balance, "ether"));
         } catch (error) {
             console.error("Error fetching game balance:", error);
+        }
+    };
+
+    // Fetch player usernames based on player IDs from the game object
+    useEffect(() => {
+        if (!player1Username || !player2Username) {
+            fetchPlayerUsernames(game.player1Id, game.player2Id);
+        }
+    }, [player1Username, player2Username]);
+
+    const fetchPlayerUsernames = async (player1Id: number, player2Id: number) => {
+        try {
+            const response = await fetch('/api/games/getUsernames', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ player1Id, player2Id })
+            });
+
+            const data = await response.json();
+            setPlayer1Username(data.player1Username);
+            setPlayer2Username(data.player2Username);
+        } catch (error) {
+            console.error('Error fetching player usernames:', error);
+        }
+    };
+
+    // Create a Lichess game if not already created
+    useEffect(() => {
+        if (!lichessGameId && player1Username && player2Username) {
+            createLichessGame(game.id, player1Username, player2Username);
+        }
+    }, [lichessGameId, player1Username, player2Username]);
+
+    const createLichessGame = async (gameId: number, player1Username: string, player2Username: string) => {
+        console.log("gameId: ", gameId);
+        try {
+            const response = await fetch('/api/games/createLichessGame', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    gameId,
+                    player1Username,
+                    player2Username
+                }),
+            });
+            const data = await response.json();
+            setLichessGameId(data.lichessGameId);
+        } catch (error) {
+            console.error("Error creating Lichess game:", error);
         }
     };
 
@@ -56,14 +107,22 @@ export default function GameComponent({ game }: { game: any }) {
             </div>
 
             <div className={styles.playerInfo}>
-                <div>Player 1: {game.player1Id}</div>
-                <div>Player 2: {game.player2Id}</div>
+                <div>Player 1: {player1Username || game.player1Id}</div>
+                <div>Player 2: {player2Username || game.player2Id}</div>
             </div>
             <div className={styles.gameInfo}>
                 <div>Wager Amount: {game.wagerAmount}</div>
                 <div>Active: {game.isActive.toString()}</div>
                 <div>Game Balance (Escrow): {gameBalance} ETH</div> {/* Display game-specific balance */}
             </div>
+
+            {lichessGameId && (
+                <div className={styles.lichessLink}>
+                    <a href={`https://lichess.org/${lichessGameId}`} target="_blank" rel="noopener noreferrer">
+                        Play on Lichess
+                    </a>
+                </div>
+            )}
         </div>
     );
 }

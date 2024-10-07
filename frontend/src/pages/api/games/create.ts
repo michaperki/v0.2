@@ -35,6 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         const adjustedGameId = parseInt(contractGameId); // Increment the game ID by 1
+        console.log(`Creating game with ID: ${adjustedGameId}`);
 
         // Create the game entry in the Game table
         const newGame = await prisma.game.create({
