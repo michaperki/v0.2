@@ -17,6 +17,8 @@ export default function GameComponent({ game }: { game: any }) {
     const [lichessStatus, setLichessStatus] = useState<string | null>(null);
     const [player1Username, setPlayer1Username] = useState<string | null>(null);
     const [player2Username, setPlayer2Username] = useState<string | null>(null);
+    const [gameOver, setGameOver] = useState<boolean>(false);
+    const [winner, setWinner] = useState<string | null>(null);
 
     useEffect(() => {
         if (game.contractGameId) {
@@ -101,7 +103,9 @@ export default function GameComponent({ game }: { game: any }) {
         try {
             const response = await fetch(`/api/games/fetchLichessStatus?lichessGameId=${lichessGameId}`);
             const data = await response.json();
-            setLichessStatus(data.gameStatus); // Set the fetched game status
+            setLichessStatus(data.pgn); // Set the fetched PGN status
+            setGameOver(data.gameOver);
+            setWinner(data.winner);
         } catch (error) {
             console.error('Error fetching Lichess game status:', error);
         }
@@ -142,7 +146,14 @@ export default function GameComponent({ game }: { game: any }) {
             {lichessStatus && (
                 <div className={styles.lichessStatus}>
                     <h3>Lichess Game Status:</h3>
-                    <pre>{JSON.stringify(lichessStatus, null, 2)}</pre> {/* Display game status as JSON */}
+                    <pre
+                        style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
+                    >{lichessStatus}</pre> {/* Display game status as PGN */}
+                    {gameOver && (
+                        <div>
+                            <h3>Game Over! Winner: {winner}</h3>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

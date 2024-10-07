@@ -116,7 +116,27 @@ export async function fetchLichessGameStatus(lichessGameId: string) {
         // Parse as text instead of JSON since the response is PGN
         const pgn = await response.text();
         console.log('Fetched Lichess game status:', pgn);
-        return pgn;
+
+        // Check if the game is over by looking at the result in the PGN
+        const resultRegex = /\[Result "(.*?)"\]/;
+        const resultMatch = pgn.match(resultRegex);
+        let gameOver = false;
+        let winner = null;
+
+        if (resultMatch && resultMatch[1]) {
+            const result = resultMatch[1];
+            if (result === '1-0') {
+                gameOver = true;
+                winner = 'White';
+            } else if (result === '0-1') {
+                gameOver = true;
+                winner = 'Black';
+            } else if (result === '1/2-1/2') {
+                gameOver = true;
+                winner = 'Draw';
+            }
+        }
+        return { pgn, gameOver, winner };
     } catch (error) {
         console.error('Error fetching Lichess game status:', error);
         throw error;
