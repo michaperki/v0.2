@@ -14,6 +14,7 @@ export default function GameComponent({ game }: { game: any }) {
     const [gameBalance, setGameBalance] = useState<string>(""); // State for the specific game's escrow balance
     const { getSmartContract } = useSmartContract(); // Hook to access the smart contract
     const [lichessGameId, setLichessGameId] = useState<string | null>(game.lichessGameId);
+    const [lichessStatus, setLichessStatus] = useState<string | null>(null);
     const [player1Username, setPlayer1Username] = useState<string | null>(null);
     const [player2Username, setPlayer2Username] = useState<string | null>(null);
 
@@ -96,6 +97,16 @@ export default function GameComponent({ game }: { game: any }) {
         return <div>Loading...</div>;
     }
 
+    const fetchLichessGameStatus = async () => {
+        try {
+            const response = await fetch(`/api/games/fetchLichessStatus?lichessGameId=${lichessGameId}`);
+            const data = await response.json();
+            setLichessStatus(data.gameStatus); // Set the fetched game status
+        } catch (error) {
+            console.error('Error fetching Lichess game status:', error);
+        }
+    };
+
     return (
         <div>
             <h1>Game {game.contractGameId}</h1>
@@ -121,6 +132,17 @@ export default function GameComponent({ game }: { game: any }) {
                     <a href={`https://lichess.org/${lichessGameId}`} target="_blank" rel="noopener noreferrer">
                         Play on Lichess
                     </a>
+                </div>
+            )}
+
+            <button onClick={fetchLichessGameStatus} className={styles.statusButton}>
+                Fetch Lichess Game Status
+            </button>
+
+            {lichessStatus && (
+                <div className={styles.lichessStatus}>
+                    <h3>Lichess Game Status:</h3>
+                    <pre>{JSON.stringify(lichessStatus, null, 2)}</pre> {/* Display game status as JSON */}
                 </div>
             )}
         </div>

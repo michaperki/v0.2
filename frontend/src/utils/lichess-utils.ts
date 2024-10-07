@@ -97,3 +97,28 @@ export async function createChallenge(
     }
 }
 
+export async function fetchLichessGameStatus(lichessGameId: string) {
+    try {
+        const headers = {
+            Authorization: 'Bearer ' + process.env.LICHESS_TOKEN,
+        };
+
+        console.log("token", process.env.LICHESS_TOKEN);
+        console.log('Fetching Lichess game status:', lichessGameId);
+
+        // Request the game status in PGN format
+        const response = await fetch(`https://lichess.org/game/export/${lichessGameId}`, { headers });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch Lichess game status: ' + response.statusText);
+        }
+
+        // Parse as text instead of JSON since the response is PGN
+        const pgn = await response.text();
+        console.log('Fetched Lichess game status:', pgn);
+        return pgn;
+    } catch (error) {
+        console.error('Error fetching Lichess game status:', error);
+        throw error;
+    }
+}
