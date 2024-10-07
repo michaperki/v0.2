@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { useRouter } from 'next/router';
@@ -105,9 +104,49 @@ export default function GameComponent({ game }: { game: any }) {
             const data = await response.json();
             setLichessStatus(data.pgn); // Set the fetched PGN status
             setGameOver(data.gameOver);
-            setWinner(data.winner);
+            setWinner(data.winnerUsername);
+            if (data.gameOver) {
+                declareWinner(data.winnerUsername);
+            }
         } catch (error) {
             console.error('Error fetching Lichess game status:', error);
+        }
+    };
+
+    const declareWinner = async (winnerUsername: string) => {
+        try {
+            // Fetch the winner's address from the Prisma database
+            console.log("Fetching winner address...");
+            console.log("Winner username:", winnerUsername);
+            const response = await fetch(`/api/user/getPlayerAddress`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: winnerUsername, // Send the winner's username to fetch their address
+                }),
+            });
+
+            const data = await response.json();
+            console.log("Winner address:", data);
+            const winnerAddress = data.address; // Get the address from the response
+
+            if (!winnerAddress) {
+                throw new Error("Winner address not found");
+            }
+
+            const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
+
+            if (!chessBettingContract) {
+                throw new Error("ChessBetting contract not found");
+            }
+
+            // Call the declareResult function on the smart contract
+            const tx = await chessBettingContract.declareResult(game.contractGameId, winnerAddress);
+            await tx.wait();
+
+            console.log("Winner declared and funds distributed!");
+        } catch (error) {
+            console.error("Error declaring winner:", error);
         }
     };
 
@@ -159,4 +198,3 @@ export default function GameComponent({ game }: { game: any }) {
         </div>
     );
 }
-

@@ -1,102 +1,3 @@
-
-// utils/lichessUtils.ts
-import fetch from 'node-fetch';
-
-interface LichessUserInfo {
-    id: string;
-    username: string;
-    perfs: {
-        rapid: { rating: number };
-    };
-    // Add other fields you expect from the Lichess user info response
-}
-
-interface LichessChallengeResponse {
-    challenge: {
-        id: string;
-        url: string;
-        // Add other relevant fields
-    };
-}
-
-/**
- * Fetches user information from Lichess
- * @param lichessHandle The Lichess username
- * @returns LichessUserInfo
- */
-export async function fetchLichessUserInfo(lichessHandle: string): Promise<LichessUserInfo> {
-    try {
-        const headers = {
-            Authorization: 'Bearer ' + process.env.LICHESS_TOKEN,
-        };
-
-        const response = await fetch(`https://lichess.org/api/user/${lichessHandle}`, { headers });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch Lichess user information: ' + response.statusText);
-        }
-
-        const userInformation: LichessUserInfo = await response.json();
-        return userInformation;
-    } catch (error) {
-        console.error('Error fetching Lichess user information:', error);
-        throw error;
-    }
-}
-
-/**
- * Creates a chess challenge on Lichess
- * @param player1Username Player 1's username
- * @param player2Username Player 2's username
- * @param timeControl Time control in seconds for the game
- * @returns LichessChallengeResponse
- */
-export async function createChallenge(
-    player1Username: string,
-    player2Username: string,
-    timeControl: string
-): Promise<LichessChallengeResponse> {
-    try {
-        const lichessApiUrl = 'https://lichess.org/api/challenge/open';
-        const headers = {
-            Authorization: 'Bearer ' + process.env.LICHESS_TOKEN,
-            'Content-Type': 'application/x-www-form-urlencoded'
-        };
-
-        const body = new URLSearchParams({
-            variant: 'standard',
-            rated: 'false',
-            color: 'random',
-            'clock.limit': timeControl,
-            'clock.increment': '0',
-            users: `${player1Username},${player2Username}`,
-            rules: 'noRematch,noGiveTime,noEarlyDraw',
-            name: 'Cheth Game'
-        });
-
-        console.log('Creating challenge:', body.toString());
-
-        const response = await fetch(lichessApiUrl, {
-            method: 'POST',
-            headers: headers,
-            body: body
-        });
-
-        if (!response.ok) {
-            console.error('Error response:', await response.text());
-            throw new Error('Failed to create open challenge on Lichess');
-        }
-
-        console.log('Challenge created:', response.status);
-
-        const challengeData: LichessChallengeResponse = await response.json();
-        return challengeData;
-    } catch (error) {
-        console.error('Error creating challenge:', error);
-        throw error;
-    }
-}
-
 export async function fetchLichessGameStatus(lichessGameId: string) {
     try {
         const headers = {
@@ -117,26 +18,45 @@ export async function fetchLichessGameStatus(lichessGameId: string) {
         const pgn = await response.text();
         console.log('Fetched Lichess game status:', pgn);
 
-        // Check if the game is over by looking at the result in the PGN
+        // Regex to extract the result, White username, and Black username
         const resultRegex = /\[Result "(.*?)"\]/;
+        const whiteUsernameRegex = /\[White "(.*?)"\]/;
+        const blackUsernameRegex = /\[Black "(.*?)"\]/;
+
         const resultMatch = pgn.match(resultRegex);
+        const whiteUsernameMatch = pgn.match(whiteUsernameRegex);
+        const blackUsernameMatch = pgn.match(blackUsernameRegex);
+
         let gameOver = false;
-        let winner = null;
+        let winnerColor: string | null = null;
+        let winnerUsername: string | null = null;
 
         if (resultMatch && resultMatch[1]) {
             const result = resultMatch[1];
+            const whiteUsername = whiteUsernameMatch ? whiteUsernameMatch[1] : null;
+            const blackUsername = blackUsernameMatch ? blackUsernameMatch[1] : null;
+
             if (result === '1-0') {
                 gameOver = true;
-                winner = 'White';
+                winnerColor = 'White';
+                winnerUsername = whiteUsername;
             } else if (result === '0-1') {
                 gameOver = true;
-                winner = 'Black';
+                winnerColor = 'Black';
+                winnerUsername = blackUsername;
             } else if (result === '1/2-1/2') {
                 gameOver = true;
-                winner = 'Draw';
+                winnerColor = 'Draw';
+                winnerUsername = null;  // No winner for a draw
             }
         }
-        return { pgn, gameOver, winner };
+
+        return {
+            pgn,
+            gameOver,
+            winnerColor,
+            winnerUsername,
+        };
     } catch (error) {
         console.error('Error fetching Lichess game status:', error);
         throw error;
