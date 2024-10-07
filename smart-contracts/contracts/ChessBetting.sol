@@ -1,3 +1,4 @@
+
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
@@ -9,6 +10,7 @@ contract ChessBetting {
         uint256 timestamp;
         address winner; // Address of the winner (if set)
         bool isActive;  // Is the game ongoing?
+        bool isCancelled; // Has the game been cancelled?
     }
 
     // Events
@@ -16,6 +18,7 @@ contract ChessBetting {
     event GameJoined(uint256 gameId, address player);
     event GameResult(uint256 gameId, address winner, uint256 payoutAmount);
     event EscrowDeposit(uint256 gameId, address player, uint256 amount);
+    event GameCancelled(uint256 gameId);
 
     // Storage
     mapping(uint256 => Game) public games; // Mapping of gameId to Game
@@ -23,6 +26,9 @@ contract ChessBetting {
 
     // Escrow account for holding funds
     mapping(uint256 => uint256) public escrow;
+
+    // Address of contract owner (e.g., the server)
+    address public owner;
 
     // Modifier to ensure only players in the game can interact with certain functions
     modifier onlyPlayers(uint256 gameId) {
@@ -36,28 +42,32 @@ contract ChessBetting {
         _;
     }
 
+    // Modifier to ensure only the contract owner can create games
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can create games");
+        _;
+    }
+
+    // Constructor to set the owner
+    constructor() {
+        owner = msg.sender;
+    }
+
     /**
      * @dev Create a new chess game with a wager
      * @param wagerAmount The amount each player wagers
      */
-    function createGame(uint256 wagerAmount) external payable {
-        require(msg.value == wagerAmount, "Incorrect wager amount");
-
+    function createGame(uint256 wagerAmount) external onlyOwner {
         // Create a new game in storage
         Game storage newGame = games[gameCounter];
         newGame.wagerAmount = wagerAmount;
         newGame.timestamp = block.timestamp;
         newGame.winner = address(0);
         newGame.isActive = false;
+        newGame.isCancelled = false;
 
-        // Add the creator as the first participant using push (now it's in storage)
-        newGame.participants.push(msg.sender);
-
-        // Store the funds in escrow
-        escrow[gameCounter] = msg.value;
-
+        // Emit the game creation event
         emit GameCreated(gameCounter, msg.sender, wagerAmount);
-        emit EscrowDeposit(gameCounter, msg.sender, msg.value);
 
         // Increment game counter
         gameCounter++;
@@ -71,19 +81,22 @@ contract ChessBetting {
         Game storage game = games[gameId];
         require(!game.isActive, "Game already active");
         require(game.participants.length < 2, "Game is already full");
+        require(!game.isCancelled, "Game has been cancelled");
         require(msg.value == game.wagerAmount, "Incorrect wager amount");
 
-        // Add the joining player as the second participant
+        // Add the joining player as a participant
         game.participants.push(msg.sender);
 
-        // Add the second player's funds to escrow
+        // Add the player's funds to escrow
         escrow[gameId] += msg.value;
-
-        // Set the game to active now that both players have joined
-        game.isActive = true;
 
         emit GameJoined(gameId, msg.sender);
         emit EscrowDeposit(gameId, msg.sender, msg.value);
+
+        // If two players have joined, mark the game as active
+        if (game.participants.length == 2) {
+            game.isActive = true;
+        }
     }
 
     /**
@@ -109,6 +122,21 @@ contract ChessBetting {
     }
 
     /**
+     * @dev Cancel an existing game if no participants have joined
+     * @param gameId The ID of the game to cancel
+     */
+    function cancelGame(uint256 gameId) external onlyOwner {
+        Game storage game = games[gameId];
+        require(!game.isActive, "Cannot cancel an active game");
+        require(game.participants.length == 0, "Cannot cancel a game with participants");
+
+        // Mark the game as cancelled
+        game.isCancelled = true;
+
+        emit GameCancelled(gameId);
+    }
+
+    /**
      * @dev Get details of a game by its ID
      * @param gameId The ID of the game
      */
@@ -120,11 +148,19 @@ contract ChessBetting {
      * @dev Get all active games
      */
     function getAllGames() external view returns (Game[] memory) {
-        // Return all the games in the array
         Game[] memory allGames = new Game[](gameCounter);
         for (uint256 i = 0; i < gameCounter; i++) {
             allGames[i] = games[i];
         }
         return allGames;
     }
+
+    /**
+     * @dev Change the owner of the contract (optional feature)
+     * @param newOwner The address of the new owner
+     */
+    function changeOwner(address newOwner) external onlyOwner {
+        owner = newOwner;
+    }
 }
+

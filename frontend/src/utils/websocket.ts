@@ -1,31 +1,32 @@
 
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
+import { monitorLichessGame } from './game-monitor';  // Import the game monitoring function
 
 const wss = new WebSocketServer({ port: 8080 });
 
-wss.on('connection', (ws) => {
-    ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-
-        switch (message.type) {
-            case 'game-started':
-                console.log(`Game started with ID: ${message.gameId}`);
-                // Handle game start
-                break;
-
-            case 'player-joined':
-                console.log(`Player joined game: ${message.playerId}`);
-                // Handle player join
-                break;
-
-            default:
-                console.log('Unknown message type');
+// Function to notify clients about game events
+const broadcastGameUpdate = (gameId: string, message: object) => {
+    wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ gameId, ...message }));
         }
-    };
+    });
+};
 
-    ws.on('close', () => {
-        console.log('Client disconnected');
+// Setup WebSocket to monitor game and send events to clients
+wss.on('connection', (ws) => {
+    ws.on('message', async (data) => {
+        const { gameId, lichessToken } = JSON.parse(data.toString());
+
+        // Start monitoring the Lichess game
+        await monitorLichessGame(gameId, lichessToken, (event) => {
+            if (event.type === 'gameFinish') {
+                broadcastGameUpdate(gameId, { type: 'game-over', event });
+            } else if (event.type === 'gameState') {
+                broadcastGameUpdate(gameId, { type: 'game-update', moves: event.moves });
+            }
+        });
     });
 });
 
-export { wss };
+export default wss;

@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { useSmartContract } from '@/hooks/useSmartContract';
 import styles from './styles.module.css';
 import { ChessBetting } from '@/types/typechain-types';
+import Cookies from 'js-cookie'; // To handle player IDs
 
 export default function GameComponent({ game }: { game: any }) {
     const router = useRouter();
@@ -12,16 +13,76 @@ export default function GameComponent({ game }: { game: any }) {
     const { getSmartContract } = useSmartContract();
     const [isDepositing, setIsDepositing] = useState(false);
     const [error, setError] = useState("");
-    const [gameCreated, setGameCreated] = useState(false); // Track if the game has been created on-chain
+    const [gameBalance, setGameBalance] = useState<string>("0"); // Store game balance
+    const [socket, setSocket] = useState<WebSocket | null>(null); // WebSocket connection
 
     useEffect(() => {
         if (!gameId) {
             router.push("/");
+        } else {
+            connectWebSocket(); // Establish WebSocket connection when component mounts
+            fetchGameBalance(); // Fetch the game balance on component load
         }
-        // Fetch the game data (from backend or context) based on the gameId
+
+        // Clean up WebSocket on component unmount
+        return () => {
+            if (socket) {
+                socket.close();
+            }
+        };
     }, [gameId]);
 
-    // This function will handle the contract creation or joining based on whether contractGameId exists
+    // Function to establish WebSocket connection
+    const connectWebSocket = () => {
+        const lichessId = Cookies.get("lichess_id"); // Fetch player's Lichess ID from cookies
+        if (!lichessId || !gameId) {
+            return;
+        }
+
+        const ws = new WebSocket(`ws://localhost:8080/ws?playerId=${encodeURIComponent(lichessId)}&gameId=${encodeURIComponent(gameId as string)}`);
+        setSocket(ws);
+
+        ws.onopen = () => {
+            console.log('Connected to WebSocket server');
+        };
+
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            console.log('Received message:', message);
+
+            if (message.type === 'both-players-deposited') {
+                console.log(`Both players have deposited. Game ${message.gameId} is fully funded and ready.`);
+            }
+
+            if (message.type === 'game-over') {
+                console.log('Game over:', message.event);
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
+    };
+
+    // Fetch the game's balance from the smart contract
+    const fetchGameBalance = async () => {
+        try {
+            const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
+
+            if (!chessBettingContract || !game.contractGameId) {
+                throw new Error("ChessBetting contract not found or game not created");
+            }
+
+            // Fetch the balance of the game from the contract
+            const balance = await chessBettingContract.escrow(game.contractGameId);
+            setGameBalance(ethers.formatUnits(balance, "ether")); // Convert from wei to ether
+        } catch (e: any) {
+            console.error("Error fetching game balance:", e);
+            setError(e.message || "Failed to fetch game balance");
+        }
+    };
+
+    // Function to handle joining the existing game by depositing funds
     const depositFunds = async () => {
         try {
             setIsDepositing(true);
@@ -35,49 +96,28 @@ export default function GameComponent({ game }: { game: any }) {
             const signer = await provider.getSigner();
             const walletAddress = await signer.getAddress();
 
-            // Ensure the wager amount is treated as a string before parsing to Ether units
+            // Ensure the wager amount is parsed to Ether units
             const wagerAmountInEther = ethers.parseUnits(game.wagerAmount.toString(), "ether");
 
-            // get the nonce for the transaction
-            const nonce = await provider.getTransactionCount(walletAddress, 'latest');
+            // Get the nonce
+            const nonce = await provider.getTransactionCount(walletAddress, "latest");
             console.log("Nonce:", nonce);
 
-            if (!game.contractGameId) {
-                // If contractGameId does not exist, Player 1 is creating the game on-chain
-                const tx = await chessBettingContract.createGame(wagerAmountInEther, {
-                    value: wagerAmountInEther,
-                });
-                const receipt = await tx.wait();
+            // Join the existing game by depositing funds
+            const tx = await chessBettingContract.joinGame(game.contractGameId, {
+                value: wagerAmountInEther,
+            });
 
-                const gameCreatedEvent = receipt.logs.find(log => log.fragment.name === 'GameCreated');
-                const contractGameId = gameCreatedEvent?.args?.gameId;
+            await tx.wait();
+            console.log(`Player has joined the game with contractGameId: ${game.contractGameId}`);
 
-                if (contractGameId) {
-                    console.log("Game created on-chain with contractGameId:", contractGameId.toString());
-
-                    // Save the contractGameId in the backend database
-                    await fetch('/api/games/updateContractGameId', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ gameId, contractGameId: contractGameId.toString() }),
-                    });
-
-                    setGameCreated(true); // Mark that the game is now created
-                } else {
-                    throw new Error("GameCreated event not found");
-                }
-
-            } else {
-                // If contractGameId exists, Player 2 is joining the game
-                const tx = await chessBettingContract.joinGame(game.contractGameId, {
-                    value: wagerAmountInEther,
-                });
-                await tx.wait();
-                console.log("Player 2 has joined the game with contractGameId:", game.contractGameId);
+            // Notify WebSocket that the player has deposited
+            if (socket) {
+                socket.send(JSON.stringify({ type: 'player-deposited', gameId }));
             }
 
+            // Fetch the updated balance after the deposit
+            fetchGameBalance();
         } catch (e: any) {
             console.error("Error during deposit:", e);
             setError(e.message || "Failed to deposit funds");
@@ -88,11 +128,12 @@ export default function GameComponent({ game }: { game: any }) {
 
     return (
         <div>
-            <h1>Game {game.contractGameId || "Pending Creation"}</h1>
+            <h1>Game {game.contractGameId || "Pending"}</h1>
             <div className={styles.gameInfo}>
                 <div>Wager Amount: {game.wagerAmount} ETH</div>
+                <div>Game Balance: {gameBalance} ETH</div> {/* Display game balance */}
                 <button onClick={depositFunds} disabled={isDepositing}>
-                    {isDepositing ? "Depositing..." : game.contractGameId ? "Join Game" : "Create Game"}
+                    {isDepositing ? "Depositing..." : "Join Game"}
                 </button>
                 {error && <div className={styles.error}>{error}</div>}
             </div>

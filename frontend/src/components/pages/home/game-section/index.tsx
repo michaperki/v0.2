@@ -32,8 +32,14 @@ export default function GameSection() {
             const message = JSON.parse(event.data);
             console.log('Received message:', message);
 
-            if (message.type === 'game-started') {
-                console.log(`Game started, redirecting to game: ${message.gameId}`);
+            // Handle when the game pairing is completed, or both players have deposited
+            if (message.type === 'game-paired') {
+                console.log(`Game paired, redirecting to game: ${message.gameId}`);
+                router.push(`/game/${message.gameId}`);
+            }
+
+            if (message.type === 'both-players-deposited') {
+                console.log(`Both players have deposited, game ready: ${message.gameId}`);
                 router.push(`/game/${message.gameId}`);
             }
         };
@@ -84,12 +90,12 @@ export default function GameSection() {
             const { gameId, contractGameId } = await response.json();
 
             // Establish WebSocket connection
-            connectWebSocket(gameId);
+            const ws = connectWebSocket(gameId);
 
-            // Redirect to the game page where the deposit and game creation happens
+            // Check if the contract game has been created, then redirect
             if (contractGameId) {
                 console.log(`Game paired successfully, contractGameId: ${contractGameId}`);
-                router.push(`/game/${gameId}`);  // Pass the gameId for further processing
+                router.push(`/game/${gameId}`); // Redirect to the game page
             } else {
                 console.log("Waiting for an opponent...");
             }
@@ -122,9 +128,9 @@ export default function GameSection() {
                 <button
                     className={styles.btn}
                     onClick={playGame}
-                    disabled={!wagerToPost}
+                    disabled={!wagerToPost || isSending}
                 >
-                    Play Game
+                    {isSending ? "Processing..." : "Play Game"}
                 </button>
             </div>
         </div>

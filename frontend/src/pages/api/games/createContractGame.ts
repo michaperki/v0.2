@@ -2,56 +2,87 @@
 import { ethers } from 'ethers';
 import { PrismaClient } from '@prisma/client';
 import { NextApiRequest, NextApiResponse } from 'next';
-import smartContractABI from '@/constants/smart-contracts-dev.json'; // Import ABI from the constants folder
+import smartContractData from '@/constants/smart-contracts-development.json'; // Import ABI & contract address
+import deployedNetworkData from '@/constants/deployed-network-development.json'; // Import deployed network constants
+import { ChessBetting } from '@/types/typechain-types/ChessBetting'; // Import ChessBetting type
 
 const prisma = new PrismaClient();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    const { gameId, player1, player2, wagerAmount } = req.body;
+    const { gameId } = req.body;
 
     try {
-        // Fetch the game details from the database
-        const game = await prisma.game.findUnique({ where: { id: gameId } });
+        // Get the game from the database
+        const game = await prisma.game.findUnique({
+            where: { id: parseInt(gameId) },
+        });
+
         if (!game) {
             return res.status(404).json({ error: 'Game not found' });
         }
 
-        // Parse wager amount as a BigNumber
-        const wagerInEther = ethers.parseUnits(wagerAmount.toString(), 'ether');
-
-        // Initialize contract instance using the ABI from the constants folder
-        const contractAddress = process.env.CONTRACT_ADDRESS;
-        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-        const signer = new ethers.Wallet(process.env.PRIVATE_KEY!, provider); // Backend wallet signs the transaction
-        const chessBettingContract = new ethers.Contract(contractAddress, smartContractABI, signer);
-
-        // Call createGame on the smart contract
-        const tx = await chessBettingContract.createGame(player1, player2, wagerInEther, {
-            value: wagerInEther,  // Specify value if any funds need to be sent
-        });
-        const receipt = await tx.wait();
-
-        // Extract the contractGameId from the transaction receipt
-        const gameCreatedEvent = receipt.logs.find((log) => log.event === "GameCreated");
-        if (!gameCreatedEvent) {
-            throw new Error("GameCreated event not found in the transaction receipt");
+        if (game.contractGameId) {
+            return res.status(400).json({ error: 'Contract game already created' });
         }
 
-        const contractGameId = gameCreatedEvent.args[0].toString(); // Get contract game ID
+        // Initialize Ethereum provider using the server-side RPC URL
+        const provider = new ethers.JsonRpcProvider(deployedNetworkData.url);
 
-        // Update the game in the database with the contractGameId
-        await prisma.game.update({
-            where: { id: gameId },
-            data: {
-                contractGameId: contractGameId,
-                isActive: true, // Set the game as active
-            },
+        // Use server's private key to create a signer
+        const signer = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+
+        // Extract contract address and ABI from imported JSON
+        const chessBettingContractData = smartContractData.CHESSBETTING;
+
+        // Instantiate the contract with the type `ChessBetting`
+        const chessBettingContract = new ethers.Contract(
+            chessBettingContractData.contractAddress,
+            chessBettingContractData.abi,
+            signer
+        ) as unknown as ChessBetting;
+
+        const wagerAmount = game.wagerAmount;
+        console.log('Creating game with wager amount:', wagerAmount);
+
+        // Parse wager amount as a BigNumber in ether
+        const wagerInEther = ethers.parseUnits(wagerAmount.toString(), 'ether');
+
+        // Call the smart contract's `createGame` function without sending value
+        const tx = await chessBettingContract.createGame(wagerInEther);
+        const receipt = await tx.wait();
+
+        // Get the event signature for the GameCreated event
+        const eventSignature = ethers.id("GameCreated(uint256,address,uint256)");
+
+        // Find the log that matches the GameCreated event
+        const gameCreatedLog = receipt.logs.find((log) => log.topics[0] === eventSignature);
+
+        if (!gameCreatedLog) {
+            throw new Error('GameCreated event not found in the transaction receipt');
+        }
+
+        // Decode the event log
+        const decodedLog = chessBettingContract.interface.decodeEventLog(
+            "GameCreated",
+            gameCreatedLog.data,
+            gameCreatedLog.topics
+        );
+
+        // a cleaner way to write the lines above is:
+        const contractGameIdInt = parseInt(decodedLog.gameId.toString());
+
+        // update the game with the contract game ID
+        const newGame = await prisma.game.update({
+            where: { id: game.id },
+            data: { contractGameId: contractGameIdInt },
         });
 
-        return res.status(200).json({ success: true, contractGameId });
+
+        // Respond with the newly created game information
+        return res.status(200).json({ success: true, contractGameIdInt, gameId: newGame.id });
     } catch (error) {
-        console.error("Error creating contract game:", error);
-        return res.status(500).json({ error: "Failed to create contract game" });
+        console.error('Error creating contract game:', error);
+        return res.status(500).json({ error: 'Failed to create contract game' });
     }
 }
 

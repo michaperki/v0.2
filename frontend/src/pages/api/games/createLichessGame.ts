@@ -8,10 +8,13 @@ const prisma = new PrismaClient();
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { gameId, player1Username, player2Username } = req.body;
 
+    const gameIdInt = parseInt(gameId);
+    console.log('Creating Lichess game for Game ID:', gameIdInt);
+
     try {
         // Check if the game already has a Lichess Game ID
         const game = await prisma.game.findUnique({
-            where: { id: gameId },
+            where: { id: gameIdInt },
         });
 
         if (game?.lichessGameId) {
@@ -23,11 +26,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const lichessGameId = challengeData.id;
 
         // Update the game with the Lichess game ID
-        const updatedGame = await prisma.game.update({
-            where: { id: gameId },
+        await prisma.game.update({
+            where: { id: gameIdInt },
             data: { lichessGameId: lichessGameId },
         });
 
+        console.log('Game updated with Lichess game ID:', lichessGameId);
         res.status(200).json({ lichessGameId });
     } catch (error) {
         console.error('Error creating Lichess game:', error);
