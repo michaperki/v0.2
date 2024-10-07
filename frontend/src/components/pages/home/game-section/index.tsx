@@ -1,26 +1,27 @@
+
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { useRouter } from 'next/router'; // Import useRouter for navigation
+import { useRouter } from 'next/router';
 import styles from './styles.module.css';
-import { useSmartContract } from '@/hooks/useSmartContract';
 import { useWallet } from '@/hooks/useWallet';
-import { ChessBetting } from '@/types/typechain-types';  // Assuming you have ChessBetting types available
+import Cookies from 'js-cookie';
 
 export default function GameSection() {
     const [wagerToPost, setWagerToPost] = useState("");
-    const [games, setGames] = useState<ChessBetting.GameStructOutput[]>([]);
-    const { getSmartContract, deployedNetworkData } = useSmartContract();
-    const { walletConnectionStatus, switchNetwork, chainCurrent } = useWallet();
+    const { walletConnectionStatus, walletAddress } = useWallet();
     const [error, setError] = useState("");
     const [isSending, setIsSending] = useState(false);
-    const [isListening, setIsListening] = useState(false); // To prevent adding multiple listeners
     const [socket, setSocket] = useState<WebSocket | null>(null); // WebSocket state
-    const router = useRouter(); // Initialize router for navigation
+    const router = useRouter();
 
-    // WebSocket connection logic
-    const connectWebSocket = (playerId: string, gameId: string) => {
-        // Ensure that playerId and gameId are passed correctly as query parameters
-        const ws = new WebSocket(`ws://localhost:8080/ws?playerId=${encodeURIComponent(playerId)}&gameId=${encodeURIComponent(gameId)}`);
+    // Function to handle WebSocket connection
+    const connectWebSocket = (gameId: string) => {
+        const lichessId = Cookies.get("lichess_id");
+        console.log('Connecting to WebSocket server...');
+        console.log('lichessId:', lichessId);
+        console.log('gameId:', gameId);
+
+        // Ensure that lichessId and gameId are passed correctly as query parameters
+        const ws = new WebSocket(`ws://localhost:8080/ws?playerId=${encodeURIComponent(lichessId!)}&gameId=${encodeURIComponent(gameId)}`);
         setSocket(ws);
 
         ws.onopen = () => {
@@ -41,228 +42,64 @@ export default function GameSection() {
             console.log('WebSocket connection closed');
         };
 
-
         return ws;
     };
 
+    // Close WebSocket connection on unmount
     useEffect(() => {
-        if (walletConnectionStatus === "connected") {
-            syncGames();
-            listenToEscrowDepositEvents(); // Start listening for EscrowDeposit events
-        }
-    }, [walletConnectionStatus]);
+        return () => {
+            if (socket) {
+                socket.close();
+            }
+        };
+    }, [socket]);
 
-    useEffect(() => {
-        if (deployedNetworkData?.chainId && chainCurrent?.id !== deployedNetworkData?.chainId) {
-            switchNetwork && switchNetwork(deployedNetworkData?.chainId);
-        }
-    }, [chainCurrent, deployedNetworkData]);
-
-    const createGame = async () => {
+    const playGame = async () => {
         setError("");
-        const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
+        setIsSending(true);
 
         try {
-            if (!chessBettingContract || walletConnectionStatus !== "connected") {
-                throw new Error("Wallet or network not ready");
+            const lichessId = Cookies.get("lichess_id"); // Fetch Lichess ID from cookies
+
+            if (!lichessId) {
+                throw new Error("Unauthorized. Please log in first.");
             }
 
-            if (deployedNetworkData?.chainId && chainCurrent?.id !== deployedNetworkData?.chainId) {
-                await switchNetwork(deployedNetworkData.chainId);
-            }
-
-            if (chainCurrent?.id !== deployedNetworkData.chainId) {
-                throw new Error("Failed to switch network");
-            }
-
-            setIsSending(true);
-
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-
-            const walletAddress = await signer.getAddress();
-            const nonce = await provider.getTransactionCount(walletAddress, "latest"); // Get latest nonce
-            console.log("Current nonce:", nonce);
-
-            const wagerAmount = ethers.parseUnits(wagerToPost, "ether");
-
-            const tx = await chessBettingContract.createGame(wagerAmount, {
-                value: wagerAmount,
-                nonce: nonce, // Set the nonce manually to avoid the mismatch
-            });
-            const receipt = await tx.wait();
-            const gameCreatedEvent = receipt.logs.find((log) => log.fragment.name === "GameCreated");
-
-            if (gameCreatedEvent) {
-                const contractGameId = gameCreatedEvent.args[0]; // '0' is the gameId
-                const creatorAddress = gameCreatedEvent.args[1]; // '1' is the creator address
-                const wagerAmountFormatted = ethers.formatUnits(gameCreatedEvent.args[2], "ether"); // '2' is the wager amount
-
-                // Save game to the database
-                const response = await fetch("/api/games/create", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ wagerAmount: Number(wagerAmountFormatted), contractGameId: contractGameId.toString() }),
-                });
-
-                if (!response.ok) {
-                    throw new Error("Failed to create game in the database");
-                }
-
-                const { gameId } = await response.json();
-
-                // Connect to WebSocket server
-                connectWebSocket(walletAddress, gameId);
-
-                syncGames(); // Refresh the games list
-                setWagerToPost(""); // Clear input
-            } else {
-                console.log("GameCreated event not found");
-            }
-        } catch (e: any) {
-            console.error(e);
-            setError(e.message || "Failed to create game");
-        } finally {
-            setIsSending(false);
-        }
-    };
-
-    const joinGame = async (contractGameId: number) => {
-        setError("");
-        const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
-
-        try {
-            if (!chessBettingContract || walletConnectionStatus !== "connected") {
-                throw new Error("Wallet or network not ready");
-            }
-
-            if (deployedNetworkData?.chainId && chainCurrent?.id !== deployedNetworkData?.chainId) {
-                await switchNetwork(deployedNetworkData.chainId);
-            }
-
-            if (chainCurrent?.id !== deployedNetworkData.chainId) {
-                throw new Error("Failed to switch network");
-            }
-
-            setIsSending(true);
-
-            const game = games.find(game => game.contractGameId === contractGameId);
-            if (!game) {
-                throw new Error("Game not found");
-            }
-
-            const wagerAmountInWei = ethers.parseUnits(game.wagerAmount.toString(), "wei");
-
-            // Get the nonce for the transaction
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-            const nonce = await provider.getTransactionCount(signer.address);
-
-            // Call smart contract to join the game
-            const tx = await chessBettingContract.joinGame(contractGameId, {
-                value: wagerAmountInWei,
-                nonce: nonce,
-            });
-            const receipt = await tx.wait();
-
-            // Update the game in the database
-            const response = await fetch("/api/games/join", {
+            // Send wagerAmount and lichessId to the pairing API
+            const response = await fetch("/api/games/pairing", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    contractGameId,
-                    wagerAmount: Number(wagerAmountInWei),
+                    wagerAmount: Number(wagerToPost),
+                    lichessId,
                 }),
             });
 
             if (!response.ok) {
-                throw new Error("Failed to join game in the database");
+                throw new Error("Failed to pair players");
             }
 
-            const walletAddress = await signer.getAddress();
+            const { gameId, contractGameId } = await response.json();
 
-            // Connect to WebSocket server
-            connectWebSocket(walletAddress, game.id);
-            setIsSending(false);
+            // Establish WebSocket connection
+            connectWebSocket(gameId);
 
-            syncGames(); // Refresh the games list
-        } catch (e: any) {
-            console.error(e);
-            setError(e.message || "Failed to join game");
-        } finally {
-            setIsSending(false);
-        }
-    };
-
-    const syncGames = async () => {
-        setError("");
-        const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
-
-        try {
-            if (walletConnectionStatus === "connected" && chessBettingContract) {
-                // Fetch games from Prisma (DB)
-                const response = await fetch('/api/games');
-                if (!response.ok) {
-                    throw new Error("Failed to fetch games from the database");
-                }
-                const gamesFromDb = await response.json();
-
-                // Fetch all games from the smart contract
-                const allGames = await chessBettingContract.getAllGames();
-
-                const formattedGames = gamesFromDb.map((dbGame) => {
-                    const contractGame = allGames.find((game, index) => index === dbGame.contractGameId);
-                    if (!contractGame) {
-                        console.warn(`Contract game not found for contractGameId: ${dbGame.contractGameId}`);
-                        return null;
-                    }
-
-                    const wagerAmountInEther = ethers.formatUnits(contractGame[1], "wei");
-
-                    return {
-                        id: dbGame.id,
-                        contractGameId: dbGame.contractGameId,
-                        wagerAmount: wagerAmountInEther,
-                        isActive: contractGame[4],
-                        participants: contractGame[0].map((participant: any) => participant.toString())
-                    };
-                }).filter(game => game !== null);
-
-                setGames(formattedGames);
+            // Redirect to the game page where the deposit and game creation happens
+            if (contractGameId) {
+                console.log(`Game paired successfully, contractGameId: ${contractGameId}`);
+                router.push(`/game/${gameId}`);  // Pass the gameId for further processing
+            } else {
+                console.log("Waiting for an opponent...");
             }
+
+            setWagerToPost("");  // Clear input after the process
         } catch (e) {
             console.error(e);
-            setError("Failed to sync all games");
-        }
-    };
-
-    const listenToEscrowDepositEvents = async () => {
-        if (isListening) return;
-
-        try {
-            const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
-            if (!chessBettingContract) return;
-
-            const filter = chessBettingContract.filters.EscrowDeposit();
-            const pastEvents = await chessBettingContract.queryFilter(filter);
-
-            pastEvents.forEach((event) => {
-                console.log(`Past EscrowDeposit event for Game ID: ${event.args.gameId.toString()}`);
-                syncGames();
-            });
-
-            chessBettingContract.on("EscrowDeposit", (gameId, player, amount) => {
-                console.log(`EscrowDeposit event detected for Game ID: ${gameId.toString()}`);
-                syncGames();
-            });
-
-            setIsListening(true);
-        } catch (error) {
-            console.error("Error listening: to EscrowDeposit events:", error);
+            setError(e.message || "Failed to play game");
+        } finally {
+            setIsSending(false);
         }
     };
 
@@ -274,7 +111,7 @@ export default function GameSection() {
             {isSending && <div className={styles.loading}>Sending...</div>}
 
             <div className={styles.createGame}>
-                <h3>Create a New Game</h3>
+                <h3>Enter Wager and Play</h3>
                 <input
                     className={styles.input}
                     type="text"
@@ -282,36 +119,15 @@ export default function GameSection() {
                     onChange={(e) => setWagerToPost(e.target.value)}
                     placeholder="Enter wager amount in ETH"
                 />
-                <button className={styles.btn} onClick={createGame} disabled={!wagerToPost}>
-                    Create Game
+                <button
+                    className={styles.btn}
+                    onClick={playGame}
+                    disabled={!wagerToPost}
+                >
+                    Play Game
                 </button>
             </div>
-
-            <ul className={styles.gameList}>
-                {games.map((game, index) => (
-                    <li className={styles.list} key={index}>
-                        <div className={styles.listItem}>
-                            <p>Game ID: {game.id}</p>
-                            <p>Game contract id: {game.contractGameId}</p>
-                            {game.participants.map((participant, idx) => (
-                                <p key={idx}>Player {idx + 1}: {participant}</p>
-                            ))}
-                            <p>Wager: {ethers.formatUnits(game.wagerAmount, "ether")} ETH</p>
-                            <p>Status: {game.isActive ? "Active" : "Not active"}</p>
-
-                            {!game.isActive && game.participants.length < 2 && (
-                                <button className={styles.btn} onClick={() => joinGame(game.contractGameId)}>Join Game</button>
-                            )}
-
-                            {game.isActive && (
-                                <button onClick={() => router.push(`/game/${game.id}`)}>
-                                    Go to Game
-                                </button>
-                            )}
-                        </div>
-                    </li>
-                ))}
-            </ul>
         </div>
     );
 }
+

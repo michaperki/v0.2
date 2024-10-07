@@ -1,6 +1,5 @@
-
 import { createServer } from 'http';
-import { WebSocketServer, WebSocket, RawData } from 'ws';
+import { WebSocketServer, WebSocket, RawData } from 'ws';  // Add RawData here for type reference
 import { parse } from 'url';
 
 interface WebSocketConnection {
@@ -19,7 +18,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 const connections: WebSocketConnection[] = [];
 
 // Safely parse WebSocket message data
-const safelyParseMessage = (data: RawData): any | null => {
+const safelyParseMessage = (data: RawData): any | null => {  // Use RawData directly
   try {
     const messageString = Buffer.isBuffer(data) ? data.toString() : data;
     return JSON.parse(messageString as string);
@@ -36,29 +35,48 @@ const broadcastToGame = (gameId: string, message: object) => {
     .forEach((conn) => conn.ws.send(JSON.stringify(message)));
 };
 
-// Check if a room has two players, and if so, notify them to start the game
-const checkAndNotifyRoomReady = (gameId: string) => {
-  const playersInGame = connections.filter(conn => conn.gameId === gameId);
-  if (playersInGame.length === 2) {
-    const gameStartMessage = {
-      type: 'game-started',
-      gameId,
-      message: 'Game is ready to start',
-    };
 
-    // Notify both players that the game is ready to start
-    playersInGame.forEach(player => {
-      player.ws.send(JSON.stringify(gameStartMessage));
-    });
 
+// Function to handle pairing and trigger contract game creation
+const checkAndNotifyRoomReady = async (gameId: string) => {
+  const gameConnections = connections.filter(conn => conn.gameId === gameId);
+
+  if (gameConnections.length === 2) {
+    // Send WebSocket message to start the game
+    broadcastToGame(gameId, { type: 'game-started', gameId });
     console.log(`Game ${gameId} is ready with 2 players.`);
+
+    // Extract the players' information (e.g., addresses or Lichess IDs)
+    const player1 = gameConnections[0].playerId;
+    const player2 = gameConnections[1].playerId;
+
+    try {
+      // Send a POST request to the backend to trigger the contract game creation
+      const response = await fetch('http://localhost:3000/api/games/createContractGame', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          gameId,
+          player1,
+          player2,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create game on contract');
+      }
+
+      console.log(`Contract game successfully created for Game ID: ${gameId}`);
+    } catch (error) {
+      console.error('Error creating contract game:', error);
+    }
   }
 };
 
 // Handle WebSocket connections
 wss.on('connection', (ws, req) => {
-  console.log('New client connected');
-
   // Parse query parameters from the WebSocket URL
   const parsedUrl = parse(req.url || '', true);
   const playerId = parsedUrl.query.playerId as string;
@@ -71,12 +89,14 @@ wss.on('connection', (ws, req) => {
     return;
   }
 
+  // Add new player connection
   connections.push({ playerId, gameId, ws });
-  console.log(`Player ID: ${playerId}, Game ID: ${gameId}`);
+  console.log(`Player ID: ${playerId}, Game ID: ${gameId} connected`);
 
   // Check if the game room is ready to start (2 players)
   checkAndNotifyRoomReady(gameId);
 
+  // Handle incoming WebSocket messages
   ws.on('message', (data) => {
     const message = safelyParseMessage(data);
     if (message) {
@@ -85,8 +105,9 @@ wss.on('connection', (ws, req) => {
     }
   });
 
+  // Handle WebSocket disconnection
   ws.on('close', () => {
-    console.log(`Player ${playerId} disconnected`);
+    console.log(`Player ${playerId} disconnected from game ${gameId}`);
     removeConnection(playerId, gameId);
   });
 });
@@ -117,6 +138,8 @@ const removeConnection = (playerId: string, gameId: string) => {
     console.log(`Removed player ${playerId} from game ${gameId}`);
   }
 };
+
+
 
 // Start the HTTP server and WebSocket server
 server.listen(8080, () => {

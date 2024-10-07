@@ -1,236 +1,102 @@
+
 import { useEffect, useState } from 'react';
-import { Chessboard } from 'react-chessboard';
+import { ethers } from 'ethers';
 import { useRouter } from 'next/router';
-import { ethers } from 'ethers'; // Import ethers.js
-import { useSmartContract } from '@/hooks/useSmartContract'; // Hook to get the smart contract
+import { useSmartContract } from '@/hooks/useSmartContract';
 import styles from './styles.module.css';
-import { ChessBetting } from '@/types/typechain-types'; // Assuming you have ChessBetting types available
+import { ChessBetting } from '@/types/typechain-types';
 
 export default function GameComponent({ game }: { game: any }) {
     const router = useRouter();
-    const { id } = router.query; // Game ID from URL
-    const [position, setPosition] = useState<string | null>(null);
-    const [gameBalance, setGameBalance] = useState<string>(""); // State for the specific game's escrow balance
-    const { getSmartContract } = useSmartContract(); // Hook to access the smart contract
-    const [lichessGameId, setLichessGameId] = useState<string | null>(game.lichessGameId);
-    const [lichessStatus, setLichessStatus] = useState<string | null>(null);
-    const [player1Username, setPlayer1Username] = useState<string | null>(null);
-    const [player2Username, setPlayer2Username] = useState<string | null>(null);
-    const [gameOver, setGameOver] = useState<boolean>(false);
-    const [winner, setWinner] = useState<string | null>(null);
-
-    const [socket, setSocket] = useState<WebSocket | null>(null);
+    const { id: gameId } = router.query; // Game ID from URL
+    const { getSmartContract } = useSmartContract();
+    const [isDepositing, setIsDepositing] = useState(false);
+    const [error, setError] = useState("");
+    const [gameCreated, setGameCreated] = useState(false); // Track if the game has been created on-chain
 
     useEffect(() => {
-        const ws = new WebSocket('ws://localhost:3000'); // Connect to the WebSocket server
-        setSocket(ws);
-
-        ws.onopen = () => {
-            console.log('Connected to WebSocket server');
-            ws.send(JSON.stringify({ message: 'Connected to WebSocket server' }));
-        };
-
-        ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            console.log('Received message:', message);
-
-            switch (message.type) {
-                case 'move':
-                    handleMove(message.move);
-                    break;
-                case 'game-over':
-                    setGameOver(true);
-                    setWinner(message.winner);
-                    break;
-                default:
-                    console.log('Unknown message type');
-            }
-        };
-
-        setSocket(ws);
-
-        return () => {
-            ws.close();
-        };
-    }, []);
-
-
-    useEffect(() => {
-        if (game.contractGameId) {
-            fetchGameEscrowBalance(game.contractGameId); // Fetch the balance using contractGameId
+        if (!gameId) {
+            router.push("/");
         }
-    }, [game.contractGameId, gameBalance]);
+        // Fetch the game data (from backend or context) based on the gameId
+    }, [gameId]);
 
-    // Fetch the balance for the specific game from the escrow
-    const fetchGameEscrowBalance = async (contractGameId: string) => {
+    // This function will handle the contract creation or joining based on whether contractGameId exists
+    const depositFunds = async () => {
         try {
-            const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
-            if (!chessBettingContract) {
-                console.error("ChessBetting contract not found");
-                return;
-            }
-            const balance = await chessBettingContract.escrow(contractGameId); // Use contractGameId
-            setGameBalance(ethers.formatUnits(balance, "ether"));
-        } catch (error) {
-            console.error("Error fetching game balance:", error);
-        }
-    };
-
-    // Fetch player usernames based on player IDs from the game object
-    useEffect(() => {
-        if (!player1Username || !player2Username) {
-            fetchPlayerUsernames(game.player1Id, game.player2Id);
-        }
-    }, [player1Username, player2Username]);
-
-    const fetchPlayerUsernames = async (player1Id: number, player2Id: number) => {
-        try {
-            const response = await fetch('/api/games/getUsernames', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ player1Id, player2Id })
-            });
-
-            const data = await response.json();
-            setPlayer1Username(data.player1Username);
-            setPlayer2Username(data.player2Username);
-        } catch (error) {
-            console.error('Error fetching player usernames:', error);
-        }
-    };
-
-    // Create a Lichess game if not already created
-    useEffect(() => {
-        if (!lichessGameId && player1Username && player2Username) {
-            createLichessGame(game.id, player1Username, player2Username);
-        }
-    }, [lichessGameId, player1Username, player2Username]);
-
-    const createLichessGame = async (gameId: number, player1Username: string, player2Username: string) => {
-        console.log("gameId: ", gameId);
-        try {
-            const response = await fetch('/api/games/createLichessGame', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    gameId,
-                    player1Username,
-                    player2Username
-                }),
-            });
-            const data = await response.json();
-            setLichessGameId(data.lichessGameId);
-        } catch (error) {
-            console.error("Error creating Lichess game:", error);
-        }
-    };
-
-    const handleMove = (move: string) => {
-        // Update the position on the chessboard
-        setPosition(move);
-    };
-
-    if (!game) {
-        return <div>Loading...</div>;
-    }
-
-    const fetchLichessGameStatus = async () => {
-        try {
-            const response = await fetch(`/api/games/fetchLichessStatus?lichessGameId=${lichessGameId}`);
-            const data = await response.json();
-            setLichessStatus(data.pgn); // Set the fetched PGN status
-            setGameOver(data.gameOver);
-            setWinner(data.winnerUsername);
-            if (data.gameOver) {
-                declareWinner(data.winnerUsername);
-            }
-        } catch (error) {
-            console.error('Error fetching Lichess game status:', error);
-        }
-    };
-
-    const declareWinner = async (winnerUsername: string) => {
-        try {
-            // Fetch the winner's address from the Prisma database
-            console.log("Fetching winner address...");
-            console.log("Winner username:", winnerUsername);
-            const response = await fetch(`/api/user/getPlayerAddress`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: winnerUsername, // Send the winner's username to fetch their address
-                }),
-            });
-
-            const data = await response.json();
-            console.log("Winner address:", data);
-            const winnerAddress = data.address; // Get the address from the response
-
-            if (!winnerAddress) {
-                throw new Error("Winner address not found");
-            }
-
+            setIsDepositing(true);
             const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
 
             if (!chessBettingContract) {
                 throw new Error("ChessBetting contract not found");
             }
 
-            // Call the declareResult function on the smart contract
-            const tx = await chessBettingContract.declareResult(game.contractGameId, winnerAddress);
-            await tx.wait();
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const walletAddress = await signer.getAddress();
 
-            console.log("Winner declared and funds distributed!");
-        } catch (error) {
-            console.error("Error declaring winner:", error);
+            // Ensure the wager amount is treated as a string before parsing to Ether units
+            const wagerAmountInEther = ethers.parseUnits(game.wagerAmount.toString(), "ether");
+
+            // get the nonce for the transaction
+            const nonce = await provider.getTransactionCount(walletAddress, 'latest');
+            console.log("Nonce:", nonce);
+
+            if (!game.contractGameId) {
+                // If contractGameId does not exist, Player 1 is creating the game on-chain
+                const tx = await chessBettingContract.createGame(wagerAmountInEther, {
+                    value: wagerAmountInEther,
+                });
+                const receipt = await tx.wait();
+
+                const gameCreatedEvent = receipt.logs.find(log => log.fragment.name === 'GameCreated');
+                const contractGameId = gameCreatedEvent?.args?.gameId;
+
+                if (contractGameId) {
+                    console.log("Game created on-chain with contractGameId:", contractGameId.toString());
+
+                    // Save the contractGameId in the backend database
+                    await fetch('/api/games/updateContractGameId', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ gameId, contractGameId: contractGameId.toString() }),
+                    });
+
+                    setGameCreated(true); // Mark that the game is now created
+                } else {
+                    throw new Error("GameCreated event not found");
+                }
+
+            } else {
+                // If contractGameId exists, Player 2 is joining the game
+                const tx = await chessBettingContract.joinGame(game.contractGameId, {
+                    value: wagerAmountInEther,
+                });
+                await tx.wait();
+                console.log("Player 2 has joined the game with contractGameId:", game.contractGameId);
+            }
+
+        } catch (e: any) {
+            console.error("Error during deposit:", e);
+            setError(e.message || "Failed to deposit funds");
+        } finally {
+            setIsDepositing(false);
         }
     };
 
     return (
         <div>
-            <h1>Game {game.contractGameId}</h1>
-            <div className={styles.gameContainer}>
-                <Chessboard
-                    position={position || game.initialPosition}
-                    onMove={handleMove}
-                />
-            </div>
-
-            <div className={styles.playerInfo}>
-                <div>Player 1: {player1Username || game.player1Id}</div>
-                <div>Player 2: {player2Username || game.player2Id}</div>
-            </div>
+            <h1>Game {game.contractGameId || "Pending Creation"}</h1>
             <div className={styles.gameInfo}>
-                <div>Wager Amount: {game.wagerAmount}</div>
-                <div>Active: {game.isActive.toString()}</div>
-                <div>Game Balance (Escrow): {gameBalance} ETH</div> {/* Display game-specific balance */}
+                <div>Wager Amount: {game.wagerAmount} ETH</div>
+                <button onClick={depositFunds} disabled={isDepositing}>
+                    {isDepositing ? "Depositing..." : game.contractGameId ? "Join Game" : "Create Game"}
+                </button>
+                {error && <div className={styles.error}>{error}</div>}
             </div>
-
-            {lichessGameId && (
-                <div className={styles.lichessLink}>
-                    <a href={`https://lichess.org/${lichessGameId}`} target="_blank" rel="noopener noreferrer">
-                        Play on Lichess
-                    </a>
-                </div>
-            )}
-
-            <button onClick={fetchLichessGameStatus} className={styles.statusButton}>
-                Fetch Lichess Game Status
-            </button>
-
-            {lichessStatus && (
-                <div className={styles.lichessStatus}>
-                    <h3>Lichess Game Status:</h3>
-                    <pre
-                        style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
-                    >{lichessStatus}</pre> {/* Display game status as PGN */}
-                    {gameOver && (
-                        <div>
-                            <h3>Game Over! Winner: {winner}</h3>
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
     );
 }
+

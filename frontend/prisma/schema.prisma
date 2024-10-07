@@ -27,7 +27,7 @@ model User {
 
 model Game {
   id            Int      @id @default(autoincrement())
-  contractGameId Int      @unique  // The game ID from the smart contract
+  contractGameId Int?
   lichessGameId  String?
   player1        User     @relation("Player1Games", fields: [player1Id], references: [id])
   player1Id      Int
