@@ -6,7 +6,6 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Interface to represent each player's connection
 interface WebSocketConnection {
   playerId: string;
   gameId: string;
@@ -18,16 +17,10 @@ interface WebSocketConnection {
   fundsDistributed: boolean; // Flag to prevent distributing funds more than once
 }
 
-// Create HTTP server
 const server = createServer();
-
-// Initialize WebSocket server over the HTTP server
 const wss = new WebSocketServer({ server, path: '/ws' });
-
-// Store connected players
 const connections: WebSocketConnection[] = [];
 
-// Utility function to safely parse WebSocket message data
 const safelyParseMessage = (data: RawData): any | null => {
   try {
     return JSON.parse(data.toString());
@@ -37,14 +30,12 @@ const safelyParseMessage = (data: RawData): any | null => {
   }
 };
 
-// Function to broadcast a message to all players in the same game
 const broadcastToGame = (gameId: string, message: object) => {
   connections
     .filter((conn) => conn.gameId === gameId)
     .forEach((conn) => conn.ws.send(JSON.stringify(message)));
 };
 
-// Function to handle pairing players and trigger contract creation
 const checkAndNotifyRoomReady = async (gameId: string) => {
   const gameConnections = connections.filter((conn) => conn.gameId === gameId);
   if (gameConnections.length === 2) {
@@ -57,36 +48,33 @@ const checkAndNotifyRoomReady = async (gameId: string) => {
   }
 };
 
-// Prevent multiple contract creation requests by adding the `isExecuting` flag and checking `contractCreated`
 const executeContractCreation = async (gameId: string, player1: string, player2: string) => {
-  const connection = connections.find((conn) => conn.gameId === gameId);
-  if (!connection) return;
+    const connection = connections.find((conn) => conn.gameId === gameId);
+    if (!connection || connection.isExecuting || connection.contractCreated) return;
 
-  if (connection.isExecuting || connection.contractCreated) {
-    console.log(`Contract creation already in progress or completed for game ${gameId}`);
-    return;
-  }
+    connection.isExecuting = true;
+    try {
+        const response = await fetch('http://localhost:3000/api/games/createContractGame', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameId, player1, player2 }),
+        });
 
-  connection.isExecuting = true;
-  try {
-    const response = await fetch('http://localhost:3000/api/games/createContractGame', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gameId, player1, player2 }),
-    });
+        if (!response.ok) throw new Error('Failed to create game on contract');
 
-    if (!response.ok) throw new Error('Failed to create game on contract');
+        const { contractGameIdInt } = await response.json();
+        console.log(`Contract game created with ID: ${contractGameIdInt}`);
 
-    console.log(`Contract game successfully created for Game ID: ${gameId}`);
-    connection.contractCreated = true;
-  } catch (error) {
-    console.error('Error creating contract game:', error);
-  } finally {
-    connection.isExecuting = false;
-  }
+        broadcastToGame(gameId, { type: 'game-contract-created', contractGameId: contractGameIdInt });
+
+        connection.contractCreated = true;
+    } catch (error) {
+        console.error('Error creating contract game:', error);
+    } finally {
+        connection.isExecuting = false;
+    }
 };
 
-// Handle WebSocket connections
 wss.on('connection', (ws, req) => {
   const parsedUrl = parse(req.url || '', true);
   const playerId = parsedUrl.query.playerId as string;
@@ -127,7 +115,6 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-// Handle deposits and check if both players have deposited funds
 const checkAndNotifyDepositsComplete = async (gameId: string) => {
   const gameConnections = connections.filter((conn) => conn.gameId === gameId);
   if (gameConnections.every((conn) => conn.hasDeposited)) {
@@ -147,6 +134,10 @@ const checkAndNotifyDepositsComplete = async (gameId: string) => {
       if (!response.ok) throw new Error('Failed to create Lichess game');
 
       const { lichessGameId } = await response.json();
+
+      // Broadcast the Lichess game ID to all connected clients
+      broadcastToGame(gameId, { type: 'lichess-game-created', lichessGameId });
+
       attemptToAddGameToStream(gameId, lichessGameId);
     } catch (error) {
       console.error('Error creating Lichess game:', error);
@@ -154,7 +145,6 @@ const checkAndNotifyDepositsComplete = async (gameId: string) => {
   }
 };
 
-// Periodically check and add game to stream
 const attemptToAddGameToStream = async (gameId: string, lichessGameId: string, retries = 5, delay = 30000) => {
   let attempts = 0;
   let added = false;
@@ -180,6 +170,9 @@ const attemptToAddGameToStream = async (gameId: string, lichessGameId: string, r
     // Handle the failure case, e.g., mark the game as abandoned in your database
   }
 };
+
+// Other unchanged logic omitted for brevity
+
 
 // Add a game to Lichess stream and log all incoming events
 const addGameToLichessStream = async (gameId: string, lichessGameId: string) => {

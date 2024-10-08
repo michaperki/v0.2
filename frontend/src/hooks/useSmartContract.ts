@@ -9,37 +9,32 @@ import { useEffect, useState } from "react";
  */
 export const useSmartContract = () => {
     const { ethersSigner, ethersProvider } = useWallet();
-    const [contractsData, setContractsData] = useState<ISmartContractsConstantJson>({});
-    const [deployedNetworkData, setDeployedNetworkData] = useState<IDeployedNetworkConstantJson>();
+    const [contractsData, setContractsData] = useState<ISmartContractsConstantJson | null>(null);
+    const [deployedNetworkData, setDeployedNetworkData] = useState<IDeployedNetworkConstantJson | null>(null);
+    const [loading, setLoading] = useState(true); // Loading state
 
-    // Setup contracts data
     useEffect(() => {
         (async () => {
-            const contractsDataNew = await import(`@/constants/smart-contracts-${process.env.NODE_ENV === "production" ? "production" : "development"}.json`);
-            setContractsData(contractsDataNew);
+            try {
+                const contractsDataNew = await import(`@/constants/smart-contracts-${process.env.NODE_ENV === "production" ? "production" : "development"}.json`);
+                const deployedNetworkDataNew = await import(`@/constants/deployed-network-${process.env.NODE_ENV === "production" ? "production" : "development"}.json`);
 
-            const deployedNetworkDataNew = await import(`@/constants/deployed-network-${process.env.NODE_ENV === "production" ? "production" : "development"}.json`);
-            setDeployedNetworkData(deployedNetworkDataNew);
+                setContractsData(contractsDataNew);
+                setDeployedNetworkData(deployedNetworkDataNew);
+                setLoading(false); // Set loading to false after data is loaded
+            } catch (error) {
+                console.error('Error loading contract data:', error);
+                setLoading(false);
+            }
         })();
     }, []);
 
-    /**
-     * @description Gets names of all smart contracts
-     * @returns Array of names
-     */
-    const getAllSmartContractNames = () => {
-        return Object.keys(contractsData);
-    }
-
-    /**
-     * @description Gets a specific smart contract, wrapped with Ethers
-     * @param name Name of the smart contract, all upper-case
-     * @dev To get names of all smart contracts, use `getAllSmartContractNames` function
-     * @returns Smart contract
-     */
     const getSmartContract = <T>(name: string) => {
-        const smartContractData = (contractsData as ISmartContractsConstantJson)[name];
-        if (!smartContractData || !ethersProvider || !ethersSigner) return null;
+        if (loading || !contractsData || !ethersProvider || !ethersSigner) {
+            return null; // Prevent returning undefined if data is not yet loaded
+        }
+        const smartContractData = contractsData[name];
+        if (!smartContractData) return null;
 
         const smartContract = new ethers.Contract(
             smartContractData.contractAddress,
@@ -48,16 +43,11 @@ export const useSmartContract = () => {
         ) as T;
 
         return smartContract;
-    }
+    };
 
     return {
-        // Data
         deployedNetworkData,
-
-        // Methods
         getSmartContract,
-        getAllSmartContractNames
-    }
-}
-
-
+        loading,
+    };
+};
