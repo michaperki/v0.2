@@ -45,8 +45,8 @@ export const initiateLichessLogin = async () => {
 
     // Generate and store a random state value
     const state = generateState();
-    Cookies.set("lichess_code_verifier", codeVerifier);
-    Cookies.set("oauth_state", state);  // Store the state in cookies
+    Cookies.set("lichess_code_verifier", codeVerifier, { sameSite: "strict", secure: true });  // Store the code verifier in cookies
+    Cookies.set("oauth_state", state, { sameSite: "strict", secure: true });  // Store the state in cookies
 
     const params = new URLSearchParams({
       response_type: "code",

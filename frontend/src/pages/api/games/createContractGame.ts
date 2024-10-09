@@ -1,12 +1,10 @@
 
 import { ethers } from 'ethers';
-import { PrismaClient } from '@prisma/client';
 import { NextApiRequest, NextApiResponse } from 'next';
 import smartContractData from '@/constants/smart-contracts-development.json'; // Import ABI & contract address
 import deployedNetworkData from '@/constants/deployed-network-development.json'; // Import deployed network constants
 import { ChessBetting } from '@/types/typechain-types/ChessBetting'; // Import ChessBetting type
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { gameId } = req.body;
@@ -50,6 +48,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Call the smart contract's `createGame` function without sending value
         const tx = await chessBettingContract.createGame(wagerInEther);
         const receipt = await tx.wait();
+
+        if (!receipt || !Array.isArray(receipt.logs)) {
+            throw new Error('Transaction receipt is null or logs are missing');
+        }
 
         // Get the event signature for the GameCreated event
         const eventSignature = ethers.id("GameCreated(uint256,address,uint256)");

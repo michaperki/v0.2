@@ -3,9 +3,7 @@
 
 import GameComponent from '@/components/pages/game/[id]/GameComponent';
 import { GetStaticPaths, GetStaticProps } from 'next';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export default function GamePage({ game }: { game: any }) {
     return <GameComponent game={game} />;
@@ -29,25 +27,28 @@ export const getStaticPaths: GetStaticPaths = async () => {
 export const getStaticProps: GetStaticProps = async ({ params }) => {
     const { id } = params as { id: string };
 
-    const game = await prisma.game.findUnique({
-        where: { id: parseInt(id, 10) }, // Ensure `id` is parsed correctly
-    });
+    try {
+        const game = await prisma.game.findUnique({
+            where: { id: parseInt(id, 10) }, // Ensure `id` is parsed correctly
+        });
 
-    if (!game) {
+        if (!game) {
+            return {
+                notFound: true, // Handle 404 if the game isn't found
+            };
+        }
+
         return {
-            notFound: true, // Handle 404 if the game isn't found
-        };
-    }
-
-    return {
-        props: {
-            game: {
-                ...game,
-                createdAt: game.createdAt.toISOString(),
-                updatedAt: game.updatedAt.toISOString(),
+            props: {
+                game: {
+                    ...game,
+                    createdAt: game.createdAt.toISOString(),
+                    updatedAt: game.updatedAt.toISOString(),
+                },
             },
-        },
-        revalidate: 60, // Revalidate every 60 seconds
-    };
+            revalidate: 60, // Revalidate every 60 seconds
+        };
+    } finally {
+        await prisma.$disconnect(); // Ensure Prisma disconnects after the operation
+    }
 };
-

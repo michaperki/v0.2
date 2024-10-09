@@ -1,9 +1,7 @@
 
 import Cookies from "cookies";
 import { NextApiRequest, NextApiResponse } from "next";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const cookies = new Cookies(req, res);
@@ -92,11 +90,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     cookies.set("lichess_access_token", access_token, {
       httpOnly: false,
       sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
     });
 
     cookies.set("lichess_id", lichessId, {
         httpOnly: false,
         sameSite: "strict",
+        secure: process.env.NODE_ENV === "production",
     });
 
     cookies.set("user_id", user.id.toString(), {

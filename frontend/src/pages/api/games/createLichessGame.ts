@@ -1,9 +1,8 @@
 
 // /api/games/createLichessGame.ts
 import { NextApiRequest, NextApiResponse } from 'next';
-import { PrismaClient } from '@prisma/client';
 import { createChallenge } from '@/utils/lichess-utils'; // Reuse your utility
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { gameId, player1Username, player2Username } = req.body;

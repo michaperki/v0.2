@@ -1,10 +1,9 @@
 
 import { useState, useEffect } from "react";
-import WalletSection from "./wallet-section";
+import WalletSection from "@/components/common/wallet-section";
 import styles from "./styles.module.css";
 import { useWallet } from "@/hooks/useWallet";
 import InfoSection from "./info-section";
-import WallSection from "./wall-section";
 import GameSection from "./game-section";
 import LichessSection from "./lichess-section";
 

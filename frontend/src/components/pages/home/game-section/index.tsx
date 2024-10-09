@@ -101,7 +101,7 @@ export default function GameSection() {
             }
 
             setWagerToPost("");  // Clear input after the process
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
             setError(e.message || "Failed to play game");
         } finally {

@@ -1,10 +1,8 @@
 
 // POST /api/games/join
 import { NextApiRequest, NextApiResponse } from 'next';
-import { PrismaClient } from '@prisma/client';
 import Cookies from 'cookies';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') {
@@ -22,12 +20,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
         console.log("Joining game with contract ID:", contractGameId);
-        // Fetch the game from the database
-        const game = await prisma.game.findUnique({
+
+        // Fetch the game from the database using findFirst
+        const game = await prisma.game.findFirst({
             where: { contractGameId: contractGameId },
         });
-
-        console.log("Game found:", game);
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });

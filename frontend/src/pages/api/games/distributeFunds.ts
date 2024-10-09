@@ -1,11 +1,9 @@
 
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from 'ethers';
-import { PrismaClient } from '@prisma/client';
 import smartContractData from '@/constants/smart-contracts-development.json'; // Import the contract data
 import { ChessBetting } from '@/types/typechain-types/ChessBetting'; // Import the type
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { gameId, winnerLichessId } = req.body;

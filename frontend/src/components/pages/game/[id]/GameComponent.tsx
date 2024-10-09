@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { ethers } from 'ethers';
+import { ethers, Eip1193Provider } from 'ethers';
 import { useRouter } from 'next/router';
 import { useSmartContract } from '@/hooks/useSmartContract';
 import { useWallet } from '@/hooks/useWallet';
@@ -84,6 +84,14 @@ export default function GameComponent({ game }: { game: any }) {
             return;
         }
 
+        let provider;
+        if (window.ethereum && typeof window.ethereum.request === 'function') {
+            provider = new ethers.BrowserProvider(window.ethereum as unknown as Eip1193Provider);
+        } else {
+            setError("Ethereum provider is not available. Please install MetaMask.");
+            return;
+        }
+
         try {
             setIsDepositing(true);
             const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
@@ -92,10 +100,8 @@ export default function GameComponent({ game }: { game: any }) {
                 throw new Error("ChessBetting contract not found or contract game ID missing");
             }
 
-            const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const walletAddress = await signer.getAddress();
-
             const wagerAmountInEther = ethers.parseUnits(game.wagerAmount.toString(), "ether");
 
             const nonce = await provider.getTransactionCount(walletAddress, "latest");

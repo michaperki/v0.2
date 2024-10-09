@@ -25,7 +25,7 @@ export default function InfoSection() {
                     {/** Frontend running */}
                     <li className={styles.listItem}>
                         <h3 className={styles.heading}>
-                            2. Authenticate your lichess account
+                            2. Authenticate your Lichess account
                         </h3>
 
                         <p className={styles.text}>
