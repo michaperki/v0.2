@@ -2,7 +2,7 @@
 // POST /api/games/create
 import { NextApiRequest, NextApiResponse } from 'next';
 import Cookies from 'cookies';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') {

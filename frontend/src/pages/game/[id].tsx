@@ -3,7 +3,7 @@
 
 import GameComponent from '@/components/pages/game/[id]/GameComponent';
 import { GetStaticPaths, GetStaticProps } from 'next';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 export default function GamePage({ game }: { game: any }) {
     return <GameComponent game={game} />;

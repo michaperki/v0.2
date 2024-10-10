@@ -1,7 +1,7 @@
 
 import Cookies from "cookies";
 import { NextApiRequest, NextApiResponse } from "next";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const cookies = new Cookies(req, res);
@@ -74,41 +74,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log("Lichess user data received:", lichessUserData); // Log the Lichess user data
 
     // Step 3: Upsert the user in the Prisma database
-    const user = await prisma.user.upsert({
-      where: { lichessId },
-      update: { accessToken: access_token },
-      create: {
-        lichessId,
-        accessToken: access_token,
-      },
-    });
+    let user;
+    try {
+      user = await prisma.user.upsert({
+        where: { lichessId },
+        update: { accessToken: access_token },
+        create: {
+          lichessId,
+          accessToken: access_token,
+        },
+      });
+      console.log("User upserted successfully:", lichessId);
+    } catch (error: any) {
+      console.error("Prisma upsert error:", error.message);
+      console.error(error.stack);  // Log the full stack trace
+      throw new Error("Database error occurred.");
+    }
 
-    console.log("User upserted successfully:", lichessId);
+    // Step 4: Set cookies and respond or redirect
+    const isProd = process.env.NODE_ENV === "production"; // Check if in production
+    console.log("Is production:", isProd);
 
-    // Step 4: Redirect or respond with success
-    const cookies = new Cookies(req, res);
-    cookies.set("lichess_access_token", access_token, {
-      httpOnly: false,
-      sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
-    });
+    // cookies.set("lichess_access_token", access_token, {
+    //   httpOnly: false,
+    //   sameSite: "lax",
+    //   secure: isProd,
+    //   maxAge: 1000 * 60 * 60 * 24, // 1 day
+    // });
+    // console.log("Access token set in cookies");
 
     cookies.set("lichess_id", lichessId, {
-        httpOnly: false,
-        sameSite: "strict",
-        secure: process.env.NODE_ENV === "production",
+      httpOnly: false,
+      sameSite: "lax",
+      secure: false,
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
     });
 
     cookies.set("user_id", user.id.toString(), {
-        httpOnly: true,
-        sameSite: "strict",
-        secure: process.env.NODE_ENV === "production",
+      httpOnly: false,
+      sameSite: "lax",
+      secure: false,
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
     });
 
     res.redirect("/"); // Redirect to the home page
 
-  } catch (error) {
-    console.error("Failed to handle callback:", error);
+  } catch (error: any) {
+    console.error("Failed to handle callback:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 }
+

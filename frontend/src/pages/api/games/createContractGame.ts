@@ -4,7 +4,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import smartContractData from '@/constants/smart-contracts-development.json'; // Import ABI & contract address
 import deployedNetworkData from '@/constants/deployed-network-development.json'; // Import deployed network constants
 import { ChessBetting } from '@/types/typechain-types/ChessBetting'; // Import ChessBetting type
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { gameId } = req.body;

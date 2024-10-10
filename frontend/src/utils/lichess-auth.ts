@@ -45,8 +45,12 @@ export const initiateLichessLogin = async () => {
 
     // Generate and store a random state value
     const state = generateState();
-    Cookies.set("lichess_code_verifier", codeVerifier, { sameSite: "strict", secure: true });  // Store the code verifier in cookies
-    Cookies.set("oauth_state", state, { sameSite: "strict", secure: true });  // Store the state in cookies
+
+    const isProd = process.env.NODE_ENV === 'production'; // Check if in production
+
+    // Store the code verifier and state in cookies, with the 'secure' flag only in production
+    Cookies.set("lichess_code_verifier", codeVerifier, { sameSite: "lax", secure: isProd });
+    Cookies.set("oauth_state", state, { sameSite: "lax", secure: isProd });
 
     const params = new URLSearchParams({
       response_type: "code",
@@ -64,3 +68,4 @@ export const initiateLichessLogin = async () => {
     console.error("Failed to initiate Lichess login:", error);
   }
 };
+

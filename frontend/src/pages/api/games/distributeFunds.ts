@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from 'ethers';
 import smartContractData from '@/constants/smart-contracts-development.json'; // Import the contract data
 import { ChessBetting } from '@/types/typechain-types/ChessBetting'; // Import the type
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { gameId, winnerLichessId } = req.body;
