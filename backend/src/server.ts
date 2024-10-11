@@ -157,9 +157,15 @@ const attemptToAddGameToStream = async (gameId: string, lichessGameId: string, r
       await addGameToLichessStream(gameId, lichessGameId);
       added = true;
       console.log(`Lichess game ${lichessGameId} successfully added to stream on attempt ${attempts}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error adding game to stream (attempt ${attempts}):`, error);
-      if (attempts < retries) {
+      // Check if the error is due to rate limiting (HTTP 429)
+      if (error.message.includes('Too Many Requests')) {
+        const retryAfter = error.headers?.get('Retry-After'); // Check if Lichess provides a retry window
+        const retryDelay = retryAfter ? parseInt(retryAfter, 10) * 1000 : delay; // Use 'Retry-After' header or fallback to default delay
+        console.log(`Rate limit hit. Retrying in ${retryDelay / 1000} seconds...`);
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      } else if (attempts < retries) {
         console.log(`Retrying in ${delay / 1000} seconds...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
@@ -171,7 +177,6 @@ const attemptToAddGameToStream = async (gameId: string, lichessGameId: string, r
     // Handle the failure case, e.g., mark the game as abandoned in your database
   }
 };
-
 // Other unchanged logic omitted for brevity
 
 
