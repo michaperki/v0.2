@@ -1,9 +1,16 @@
 
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from 'ethers';
-import smartContractData from '@/constants/smart-contracts-development.json'; // Import the contract data
 import { ChessBetting } from '@/types/typechain-types/ChessBetting'; // Import the type
 import prisma from '@/lib/prisma';
+
+const deployedNetworkData = process.env.NODE_ENV === 'production'
+   ? require('@/constants/deployed-network-production.json')
+   : require('@/constants/deployed-network-development.json');
+
+const smartContractData = process.env.NODE_ENV === 'production'
+    ? require('@/constants/smart-contracts-production.json')
+    : require('@/constants/smart-contracts-development.json');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { gameId, winnerLichessId } = req.body;
@@ -31,8 +38,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const winnerUserId = winner.id;  // Get the winner's user ID
     const winnerAddress = winner.walletAddress;  // Get the wallet address for smart contract call
 
-    // Initialize Ethereum provider and contract
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+    // Initialize Ethereum provider using the appropriate network configuration
+    const provider = new ethers.JsonRpcProvider(deployedNetworkData.url);
     const signer = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
 
     // Use the contract address and ABI from constants

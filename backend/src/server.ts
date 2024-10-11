@@ -54,7 +54,8 @@ const executeContractCreation = async (gameId: string, player1: string, player2:
 
     connection.isExecuting = true;
     try {
-        const response = await fetch('http://localhost:3000/api/games/createContractGame', {
+        // use an env var CLIENT_API_URL instead of hardcoding the url
+        const response = await fetch(`${process.env.CLIENT_API_URL}/api/games/createContractGame`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ gameId, player1, player2 }),
@@ -125,7 +126,7 @@ const checkAndNotifyDepositsComplete = async (gameId: string) => {
     const player2 = gameConnections[1].playerId;
 
     try {
-      const response = await fetch('http://localhost:3000/api/games/createLichessGame', {
+      const response = await fetch(`${process.env.CLIENT_API_URL}/api/games/createLichessGame`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gameId, player1Username: player1, player2Username: player2 }),
@@ -271,7 +272,7 @@ const triggerFundDistribution = async (gameId: string, event: any) => {
     console.log(`Distributing funds for game ${gameId} to winner ${winner}`);
 
     // Sending distribution request to internal API
-    const response = await fetch('http://localhost:3000/api/games/distributeFunds', {
+    const response = await fetch(`${process.env.CLIENT_API_URL}/api/games/distributeFunds`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

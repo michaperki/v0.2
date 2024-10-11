@@ -1,10 +1,17 @@
 
 import { ethers } from 'ethers';
 import { NextApiRequest, NextApiResponse } from 'next';
-import smartContractData from '@/constants/smart-contracts-development.json'; // Import ABI & contract address
-import deployedNetworkData from '@/constants/deployed-network-development.json'; // Import deployed network constants
 import { ChessBetting } from '@/types/typechain-types/ChessBetting'; // Import ChessBetting type
 import prisma from '@/lib/prisma';
+
+
+const deployedNetworkData = process.env.NODE_ENV === 'production'
+   ? require('@/constants/deployed-network-production.json')
+   : require('@/constants/deployed-network-development.json');
+
+const smartContractData = process.env.NODE_ENV === 'production'
+    ? require('@/constants/smart-contracts-production.json')
+    : require('@/constants/smart-contracts-development.json');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { gameId } = req.body;
@@ -52,6 +59,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!receipt || !Array.isArray(receipt.logs)) {
             throw new Error('Transaction receipt is null or logs are missing');
         }
+
+        console.log('Transaction receipt:', receipt);
 
         // Get the event signature for the GameCreated event
         const eventSignature = ethers.id("GameCreated(uint256,address,uint256)");

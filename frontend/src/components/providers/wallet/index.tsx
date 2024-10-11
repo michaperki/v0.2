@@ -5,8 +5,8 @@ import { supportedChains } from './chains'
 
 // Config for WC v3
 const metadata = {
-    name: 'dApp Launchpad project',
-    description: 'A simple POC project initialised by dApp Launchpad',
+    name: 'blitz',
+    description: 'a chess betting game',
     url: 'https://127.0.0.1',
     icons: ['https://avatars.githubusercontent.com/u/37784886']
 }
