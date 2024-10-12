@@ -1,9 +1,9 @@
-
 import { useEffect, useState } from 'react';
 import { ethers, Eip1193Provider } from 'ethers';
 import { useRouter } from 'next/router';
 import { useSmartContract } from '@/hooks/useSmartContract';
 import { useWallet } from '@/hooks/useWallet';
+import WalletSection from "@/components/common/wallet-section";
 import { ChessBetting } from '@/types/typechain-types';
 import Cookies from 'js-cookie';
 import styles from './styles.module.css';
@@ -146,33 +146,36 @@ export default function GameComponent({ game }: { game: any }) {
     }, [gameId, loading, ethersSigner, ethersProvider, contractGameId]);
 
     return (
-        <div className={styles.gameContainer}>
-            {loading ? (
-                <div>Loading contract data...</div>
-            ) : (
-                <>
-                    <h1 className={styles.header}>Game {contractGameId || "Pending"}</h1>
-                    <div className={styles.gameInfo}>
-                        <div className={styles.info}>Wager Amount: {game.wagerAmount} ETH</div>
-                        <div className={styles.info}>Game Balance: {gameBalance} ETH</div>
-                        <button className={styles.button} onClick={depositFunds} disabled={isDepositing}>
-                            {isDepositing ? "Depositing..." : "Join Game"}
-                        </button>
-                        {lichessGameId && (
-                            <a
-                                href={`https://lichess.org/${lichessGameId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={styles.button}
-                            >
-                                Go to Lichess Game
-                            </a>
-                        )}
-                        {error && <div className={styles.error}>{error}</div>}
-                    </div>
-                </>
-            )}
+        <div className={styles.gameComponent}>
+            <WalletSection />
+
+            <div className={styles.gameContainer}>
+                {loading ? (
+                    <div>Loading contract data...</div>
+                ) : (
+                    <>
+                        <h1 className={styles.header}>Game {contractGameId || "Pending"}</h1>
+                        <div className={styles.gameInfo}>
+                            <div className={styles.info}>Wager Amount: {game.wagerAmount} ETH</div>
+                            <div className={styles.info}>Game Balance: {gameBalance} ETH</div>
+                            <button className={styles.button} onClick={depositFunds} disabled={isDepositing}>
+                                {isDepositing ? "Depositing..." : "Join Game"}
+                            </button>
+                            {lichessGameId && (
+                                <a
+                                    href={`https://lichess.org/${lichessGameId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.button}
+                                >
+                                    Go to Lichess Game
+                                </a>
+                            )}
+                            {error && <div className={styles.error}>{error}</div>}
+                        </div>
+                    </>
+                )}
+            </div>
         </div>
     );
 }
-

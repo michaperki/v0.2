@@ -121,7 +121,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error: any) {
     console.error("Failed to handle callback:", error.message);
-    res.status(500).json({ error: "Internal server error" });
+    res.redirect("/login?error=${encodeURIComponent(error.message)}");
   }
 }
 

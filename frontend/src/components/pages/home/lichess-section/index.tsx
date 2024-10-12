@@ -1,13 +1,21 @@
 
+import { useRouter } from 'next/router';
 import { useEffect, useState } from "react";
 import { initiateLichessLogin } from "@/utils/lichess-auth";
 import styles from "./styles.module.css";
 
 export default function LichessSection() {
+  const router = useRouter();
   const [lichessData, setLichessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check for an error in the query string
+    if (router.query.error) {
+      setError(decodeURIComponent(router.query.error as string));
+    }
+
     const fetchLichessData = async () => {
       try {
         const response = await fetch(`/api/user`, {
@@ -44,7 +52,7 @@ export default function LichessSection() {
     };
 
     fetchLichessData();
-  }, []);
+  }, [router.query]);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -52,10 +60,15 @@ export default function LichessSection() {
 
   return (
     <div className={styles.lichessSection}>
+      {error && (
+        <div className={styles.error}>
+          <p>Error: {error}</p>
+        </div>
+      )}
       {!lichessData ? (
         <div className={styles.lichessSectionInner}>
           <p>You are not logged in to Lichess.</p>
-            <hr className={styles.divider} />
+          <hr className={styles.divider} />
           <button className={styles.button} onClick={initiateLichessLogin}>
             Login to Lichess
           </button>

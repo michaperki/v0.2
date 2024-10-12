@@ -51,7 +51,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Call the declareResult function on the contract with the wallet address
     const tx = await contract.declareResult(game.contractGameId, winnerAddress);
-    await tx.wait();
+
+    // Respond early with the transaction hash
+    res.status(202).json({
+      message: "Transaction sent, waiting for confirmation",
+      transactionHash: tx.hash,
+    });
+
+    // Wait for the transaction to be mined
+    const receipt = await tx.wait();
+
+    if (!receipt) {
+      // If no receipt, log and exit
+      console.error('No transaction receipt found');
+      return res.status(500).json({ error: 'Transaction not confirmed' });
+    }
+
+    if (receipt.status !== 1) {
+      return res.status(500).json({ error: 'Transaction failed' });
+    }
 
     // Update the game status in the database to store the user ID of the winner
     await prisma.game.update({
