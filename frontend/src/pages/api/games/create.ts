@@ -10,16 +10,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const cookies = new Cookies(req, res);
-    const lichessId = cookies.get('lichess_id');  // Get Lichess ID from cookies
+    const userId = cookies.get('user_id');  // Get Lichess ID from cookies
 
-    if (!lichessId) {
+    if (!userId) {
         return res.status(401).json({ error: "Unauthorized. Please log in first." });
     }
 
     try {
         // Fetch the user from the database using Lichess ID
         const user = await prisma.user.findUnique({
-            where: { lichessId },
+            where: { id: parseInt(userId) },
         });
 
         if (!user) {
