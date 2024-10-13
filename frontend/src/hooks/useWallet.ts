@@ -20,7 +20,7 @@ export const useWallet = () => {
     const [ethersSigner, setEthersSigner] = useState<any>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // Fetch the user and store the user ID in cookies
+    // Fetch the user and store the user ID and Lichess ID in cookies
     const fetchUser = async () => {
         if (!walletAddress) return;
         console.log("Checking user status...");
@@ -38,7 +38,8 @@ export const useWallet = () => {
                 throw new Error("Failed to check user status");
             }
 
-            const { userId, accessToken } = await response.json(); // Get user ID and access token from the API
+            const { userId, accessToken, lichessId } = await response.json(); // Get user ID, access token, and Lichess ID from the API
+            console.log("User data:", { userId, accessToken, lichessId });
 
             if (userId) {
                 // Store user ID in cookies to use later for Lichess authentication checks
@@ -50,17 +51,23 @@ export const useWallet = () => {
                 // Store the access token in cookies to use later for Lichess API calls
                 Cookies.set("access_token", accessToken, { sameSite: "lax" });
             }
+
+            if (lichessId) {
+                // Store the Lichess ID in cookies for later use
+                Cookies.set("lichess_id", lichessId.toString(), { sameSite: "lax" });
+            }
+
         } catch (error) {
             console.error("Error fetching user data:", error);
         }
     };
 
+    // Fetch user data after wallet is connected
     useEffect(() => {
-        if (walletAddress) {
-            Cookies.set("wallet_address", walletAddress, { sameSite: "lax" }); // Store the wallet address in cookies
-            fetchUser();
+        if (walletAddress && ethersSigner && !isAuthenticated) {
+            fetchUser();  // Ensure we only fetch user data if the wallet is connected and the user isn't authenticated yet
         }
-    }, [walletAddress]);
+    }, [walletAddress, ethersSigner]);
 
     useEffect(() => {
         if (connector) {
@@ -76,7 +83,7 @@ export const useWallet = () => {
             setEthersProvider(null);
             setEthersSigner(null);
         }
-    }, [connector, walletAddress]);
+    }, [connector]);
 
     return {
         isConnectDialogOpen,

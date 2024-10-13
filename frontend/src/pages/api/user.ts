@@ -15,6 +15,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: "User not authenticated" });
   }
 
+  console.log("Fetching user with ID:", userId);
+
   try {
     // Fetch the user from the database using the user ID
     const user = await prisma.user.findUnique({
@@ -24,6 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+    console.log("User found:", user);
 
     return res.status(200).json({ accessToken: user.accessToken });
   } catch (error) {

@@ -19,8 +19,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: "User not found" });
     }
 
+    console.log("User found:", user);
+
     // Return userId and accessToken for future use
-    return res.status(200).json({ userId: user.id, accessToken: user.accessToken });
+    return res.status(200).json({ userId: user.id, accessToken: user.accessToken, lichessId: user.lichessId });
   } catch (error) {
     console.error("Error checking user authentication:", error);
     return res.status(500).json({ error: "Internal server error" });
