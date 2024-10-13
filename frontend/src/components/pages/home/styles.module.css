@@ -1,8 +1,36 @@
 .home {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
+  grid-gap: 20px; /* Gap between columns */
+  padding: 20px;
+}
+
+.col1, .col2, .col3 {
+  background-color: #f0f0f0; /* Light background color for demo purposes */
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .col1 {
+  grid-column: 1; /* First column */
 }
 
 .col2 {
+  grid-column: 2; /* Second column */
+}
+
+.col3 {
+  grid-column: 3; /* Third column */
+}
+
+@media (max-width: 768px) {
+  /* Stack columns on smaller screens */
+  .home {
+    grid-template-columns: 1fr; /* One column layout */
+  }
+
+  .col1, .col2, .col3 {
+    grid-column: auto;
+  }
 }
