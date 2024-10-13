@@ -8,6 +8,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const cookies = new Cookies(req, res);
   const userId = cookies.get('user_id'); // Retrieve the signed user_id from cookies
 
+  console.log("api/user.ts");
+  console.log("userId", userId);
+
   if (!userId) {
     return res.status(401).json({ error: "User not authenticated" });
   }

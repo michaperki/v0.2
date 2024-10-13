@@ -18,6 +18,49 @@ export const useWallet = () => {
 
     const [ethersProvider, setEthersProvider] = useState<any>(null);
     const [ethersSigner, setEthersSigner] = useState<any>(null);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    // Fetch the user and store the user ID in cookies
+    const fetchUser = async () => {
+        if (!walletAddress) return;
+        console.log("Checking user status...");
+
+        try {
+            const response = await fetch("/api/user/check-auth", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ walletAddress }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to check user status");
+            }
+
+            const { userId, accessToken } = await response.json(); // Get user ID and access token from the API
+
+            if (userId) {
+                // Store user ID in cookies to use later for Lichess authentication checks
+                Cookies.set("user_id", userId.toString(), { sameSite: "lax" });
+                setIsAuthenticated(true);
+            }
+
+            if (accessToken) {
+                // Store the access token in cookies to use later for Lichess API calls
+                Cookies.set("access_token", accessToken, { sameSite: "lax" });
+            }
+        } catch (error) {
+            console.error("Error fetching user data:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (walletAddress) {
+            Cookies.set("wallet_address", walletAddress, { sameSite: "lax" }); // Store the wallet address in cookies
+            fetchUser();
+        }
+    }, [walletAddress]);
 
     useEffect(() => {
         if (connector) {
@@ -28,29 +71,6 @@ export const useWallet = () => {
 
                 setEthersProvider(ethersProviderNew);
                 setEthersSigner(ethersSignerNew);
-
-                const lichessId = Cookies.get("lichess_id");
-
-                if (lichessId && walletAddress) {
-                    try {
-                        // Call the new API route to associate the wallet with the Lichess ID
-                        const response = await fetch("/api/user/wallet", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({ lichessId, walletAddress }),
-                        });
-
-                        if (!response.ok) {
-                            throw new Error("Failed to associate wallet address");
-                        }
-
-                        const data = await response.json();
-                    } catch (error) {
-                        console.error("Error associating wallet address:", error);
-                    }
-                }
             })();
         } else {
             setEthersProvider(null);
@@ -59,15 +79,13 @@ export const useWallet = () => {
     }, [connector, walletAddress]);
 
     return {
-        // Data
         isConnectDialogOpen,
         walletAddress,
-        walletConnectionStatus: ((walletConnectionStatus === "connected") ? (ethersSigner ? "connected" : "connecting") : walletConnectionStatus) as ("disconnected" | "connected" | "reconnecting" | "connecting"),
+        walletConnectionStatus: walletConnectionStatus === "connected" ? (ethersSigner ? "connected" : "connecting") : walletConnectionStatus,
         ethersProvider,
         chainCurrent,
         ethersSigner,
-
-        // Methods
+        isAuthenticated,
         showConnectDialog,
         closeConnectDialog,
         disconnectWallet,

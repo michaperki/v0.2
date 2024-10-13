@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import WalletSection from "@/components/common/wallet-section";
 import styles from "./styles.module.css";
@@ -8,10 +7,9 @@ import GameSection from "./game-section";
 import LichessSection from "./lichess-section";
 
 export default function Home() {
-  const { walletConnectionStatus } = useWallet();
+  const { walletConnectionStatus, isAuthenticated } = useWallet();
   const [lichessConnected, setLichessConnected] = useState(false);
 
-  // This effect is used to track if the Lichess login is successful
   useEffect(() => {
     const checkLichessStatus = async () => {
       try {
@@ -23,12 +21,13 @@ export default function Home() {
           }
         }
       } catch (error) {
-        console.error("Failed to check Lichess login status:", error);
       }
     };
 
-    checkLichessStatus();
-  }, []);
+    if (walletConnectionStatus === "connected" && isAuthenticated) {
+      checkLichessStatus();
+    }
+  }, [walletConnectionStatus, isAuthenticated]);
 
   return (
     <div className={styles.home}>
@@ -37,7 +36,7 @@ export default function Home() {
       </section>
       <LichessSection />
       <section className={styles.col2}>
-        {walletConnectionStatus === "connected" && lichessConnected ? (
+        {walletConnectionStatus === "connected" && isAuthenticated && lichessConnected ? (
           <GameSection />
         ) : (
           <InfoSection />
@@ -46,4 +45,3 @@ export default function Home() {
     </div>
   );
 }
-
