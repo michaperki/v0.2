@@ -7,7 +7,7 @@ import { supportedChains } from './chains'
 const metadata = {
     name: 'blitz',
     description: 'a chess betting game',
-    url: 'https://127.0.0.1',
+    url: 'https://blitz-three-nu.vercel.app/',
     icons: ['https://avatars.githubusercontent.com/u/37784886']
 }
 const wagmiConfig = defaultWagmiConfig({

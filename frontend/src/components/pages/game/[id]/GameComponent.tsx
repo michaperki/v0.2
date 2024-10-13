@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { ethers, Eip1193Provider } from 'ethers';
 import { useRouter } from 'next/router';
@@ -18,7 +19,7 @@ export default function GameComponent({ game }: { game: any }) {
     const [gameBalance, setGameBalance] = useState<string>("0");
     const [socket, setSocket] = useState<WebSocket | null>(null);
     const [contractGameId, setContractGameId] = useState<number | null>(null);
-    const [lichessGameId, setLichessGameId] = useState<string | null>(null); // New state to store Lichess game ID
+    const [lichessGameId, setLichessGameId] = useState<string | null>(null);
 
     const connectWebSocket = () => {
         const lichessId = Cookies.get("lichess_id");
@@ -45,7 +46,7 @@ export default function GameComponent({ game }: { game: any }) {
 
             if (message.type === 'lichess-game-created') {
                 console.log(`Lichess game created with ID: ${message.lichessGameId}`);
-                setLichessGameId(message.lichessGameId); // Store the Lichess game ID
+                setLichessGameId(message.lichessGameId);
             }
 
             if (message.type === 'game-over') {
@@ -85,35 +86,55 @@ export default function GameComponent({ game }: { game: any }) {
         }
 
         let provider;
-        if (window.ethereum && typeof window.ethereum.request === 'function') {
+        try {
+            // Initialize the provider using ethers' built-in provider
             provider = new ethers.BrowserProvider(window.ethereum as unknown as Eip1193Provider);
-        } else {
-            setError("Ethereum provider is not available. Please install MetaMask.");
+        } catch (e) {
+            console.error("Ethereum provider error:", e);
+            setError("Failed to connect to Ethereum provider.");
             return;
         }
 
         try {
             setIsDepositing(true);
+            setError(""); // Reset the error state before starting
+
             const chessBettingContract = getSmartContract<ChessBetting>("CHESSBETTING");
 
-            if (!chessBettingContract || !contractGameId) {
-                throw new Error("ChessBetting contract not found or contract game ID missing");
+            if (!chessBettingContract) {
+                throw new Error("ChessBetting contract not found or not yet initialized");
+            }
+
+            if (!contractGameId) {
+                throw new Error("Contract game ID missing");
             }
 
             const signer = await provider.getSigner();
             const walletAddress = await signer.getAddress();
+
+            // Convert stored wagerAmount (in wei) to string for deposit
             const wagerAmountInEther = ethers.parseUnits(game.wagerAmount.toString(), "ether");
 
-            const nonce = await provider.getTransactionCount(walletAddress, "latest");
-            console.log("Nonce:", nonce);
+            console.log(`Wager amount in ether: ${wagerAmountInEther}`);
+            console.log(`Contract Game ID: ${contractGameId}`);
+            console.log(`Wallet Address: ${walletAddress}`);
 
+            // Fetch the balance using the provider (connected wallet address)
+            const balance = await provider.getBalance(walletAddress);
+            console.log("Wallet balance:", ethers.formatUnits(balance, "ether"));
+
+            if (balance < wagerAmountInEther) {
+                throw new Error("Insufficient funds to cover wager amount and gas fees");
+            }
+
+            // Send transaction without manually setting gasLimit or nonce
             const tx = await chessBettingContract.joinGame(contractGameId, {
                 value: wagerAmountInEther,
-                nonce,
             });
 
+            console.log("Transaction sent, waiting for confirmation...");
             await tx.wait();
-            console.log(`Player has joined the game with contractGameId: ${contractGameId}`);
+            console.log(`Player has successfully joined the game with contractGameId: ${contractGameId}`);
 
             if (socket) {
                 socket.send(JSON.stringify({ type: 'player-deposited', gameId }));
@@ -122,7 +143,8 @@ export default function GameComponent({ game }: { game: any }) {
             fetchGameBalance(contractGameId);
         } catch (e: any) {
             console.error("Error during deposit:", e);
-            setError(e.message || "Failed to deposit funds");
+            const errorMessage = e.data?.message || e.message || "Failed to deposit funds";
+            setError(errorMessage);
         } finally {
             setIsDepositing(false);
         }
@@ -156,7 +178,8 @@ export default function GameComponent({ game }: { game: any }) {
                     <>
                         <h1 className={styles.header}>Game {contractGameId || "Pending"}</h1>
                         <div className={styles.gameInfo}>
-                            <div className={styles.info}>Wager Amount: {game.wagerAmount} ETH</div>
+                            {/* Convert wagerAmount from wei to ether for display */}
+                            <div className={styles.info}>Wager Amount: {ethers.formatUnits(game.wagerAmount, "ether")} ETH</div>
                             <div className={styles.info}>Game Balance: {gameBalance} ETH</div>
                             <button className={styles.button} onClick={depositFunds} disabled={isDepositing}>
                                 {isDepositing ? "Depositing..." : "Join Game"}
@@ -179,3 +202,4 @@ export default function GameComponent({ game }: { game: any }) {
         </div>
     );
 }
+

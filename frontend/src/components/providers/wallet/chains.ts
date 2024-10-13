@@ -27,12 +27,31 @@ const sepolia: Chain = {
         symbol: 'ETH',
     },
     rpcUrls: {
-        public: { http: ['https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID'] },
-        default: { http: ['https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID'] },
+        public: { http: [`https://rpc.ankr.com/eth_sepolia`] },
+        default: { http: [`https://rpc.ankr.com/eth_sepolia`] },
     },
     blockExplorers: {
         etherscan: { name: 'Etherscan', url: 'https://sepolia.etherscan.io' },
         default: { name: 'Etherscan', url: 'https://sepolia.etherscan.io' },
+    },
+}
+
+const polygonAmoy: Chain = {
+    id: 80002,
+    name: 'Polygon Amoy',
+    network: 'amoy',
+    nativeCurrency: {
+        decimals: 18,
+        name: 'Matic',
+        symbol: 'MATIC',
+    },
+    rpcUrls: {
+        public: { http: ['https://rpc-amoy.polygon.technology'] },
+        default: { http: ['https://rpc-amoy.polygon.technology'] },
+    },
+    blockExplorers: {
+        etherscan: { name: 'Polygonscan', url: 'https://amoy.polygonscan.com' },
+        default: { name: 'Polygonscan', url: 'https://amoy.polygonscan.com' },
     },
 }
 
@@ -44,6 +63,7 @@ export const supportedChains = [
     polygonMumbai,
     polygonZkEvm,
     polygonZkEvmTestnet,
+    polygonAmoy,  // Add Polygon Amoy to supported chains
     sepolia,  // Add Sepolia to supported chains
 ];
 

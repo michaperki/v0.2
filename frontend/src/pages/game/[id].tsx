@@ -42,6 +42,7 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
             props: {
                 game: {
                     ...game,
+                    wagerAmount: game.wagerAmount.toString(),
                     createdAt: game.createdAt.toISOString(),
                     updatedAt: game.updatedAt.toISOString(),
                 },

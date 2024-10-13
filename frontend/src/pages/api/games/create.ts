@@ -1,5 +1,5 @@
 
-// POST /api/games/create
+import { ethers } from 'ethers'; // Add ethers.js import
 import { NextApiRequest, NextApiResponse } from 'next';
 import Cookies from 'cookies';
 import prisma from '@/lib/prisma';
@@ -32,6 +32,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ error: "Missing required fields" });
         }
 
+        // Convert wagerAmount from ETH to wei
+        const wagerInWei = ethers.parseUnits(wagerAmount.toString(), 'ether'); // Convert to wei
+
         const adjustedGameId = parseInt(contractGameId); // Increment the game ID by 1
         console.log(`Creating game with ID: ${adjustedGameId}`);
 
@@ -40,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             data: {
                 contractGameId: adjustedGameId, // Store the smart contract game ID
                 player1Id: user.id, // Use the user's ID from the database
-                wagerAmount,
+                wagerAmount: BigInt(wagerInWei.toString()), // Store wagerAmount in wei as BigInt
                 isActive: false, // Initially inactive until the second player joins
             },
         });

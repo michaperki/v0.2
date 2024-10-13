@@ -33,7 +33,7 @@ model Game {
   player1Id      Int
   player2        User?    @relation("Player2Games", fields: [player2Id], references: [id])
   player2Id      Int?
-  wagerAmount    Int
+  wagerAmount    BigInt
   isActive       Boolean  @default(false) // Becomes true when second player joins
 
   // Relation to winner
