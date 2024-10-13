@@ -13,27 +13,29 @@ export default function Home() {
   const [loading, setLoading] = useState(true); // Unified loading state
 
   useEffect(() => {
-    const checkLichessStatus = async () => {
+    // Fetch both wallet and Lichess status concurrently
+    const fetchData = async () => {
       try {
-        const response = await fetch(`/api/user`, { method: "GET", credentials: "include" });
-        if (response.ok) {
-          const { accessToken } = await response.json();
-          if (accessToken) {
+        if (walletConnectionStatus === "connected" && isAuthenticated) {
+          const lichessStatusPromise = fetch(`/api/user`, {
+            method: "GET",
+            credentials: "include",
+          }).then((response) => response.ok ? response.json() : null);
+
+          const [lichessData] = await Promise.all([lichessStatusPromise]);
+
+          if (lichessData && lichessData.accessToken) {
             setLichessConnected(true);
           }
         }
       } catch (error) {
-        console.error("Failed to check Lichess login status:", error);
+        console.error("Failed to fetch data", error);
       } finally {
         setLoading(false); // Ensure loading is finished whether success or failure
       }
     };
 
-    if (walletConnectionStatus === "connected" && isAuthenticated) {
-      checkLichessStatus();
-    } else {
-      setLoading(false); // If the wallet isn't connected, we stop the loading state
-    }
+    fetchData();
   }, [walletConnectionStatus, isAuthenticated]);
 
   if (loading) {
