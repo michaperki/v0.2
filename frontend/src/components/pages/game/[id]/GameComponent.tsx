@@ -112,10 +112,13 @@ export default function GameComponent({ game }: { game: any }) {
             const signer = await provider.getSigner();
             const walletAddress = await signer.getAddress();
 
-            // Convert stored wagerAmount (in wei) to string for deposit
-            const wagerAmountInEther = ethers.parseUnits(game.wagerAmount.toString(), "ether");
+            // Log the raw game.wagerAmount in wei
+            console.log("Raw game.wagerAmount in wei:", game.wagerAmount);
 
-            console.log(`Wager amount in ether: ${wagerAmountInEther}`);
+            // Since game.wagerAmount is already in wei, no need to convert it
+            const wagerAmountInWei = game.wagerAmount;
+
+            console.log(`Wager amount in wei: ${wagerAmountInWei}`);
             console.log(`Contract Game ID: ${contractGameId}`);
             console.log(`Wallet Address: ${walletAddress}`);
 
@@ -123,13 +126,30 @@ export default function GameComponent({ game }: { game: any }) {
             const balance = await provider.getBalance(walletAddress);
             console.log("Wallet balance:", ethers.formatUnits(balance, "ether"));
 
-            if (balance < wagerAmountInEther) {
+            if (balance < wagerAmountInWei) {
                 throw new Error("Insufficient funds to cover wager amount and gas fees");
             }
 
-            // Send transaction without manually setting gasLimit or nonce
+            // Fetch gas prices from Polygon Amoy testnet gas station
+            const gasFees = await fetch('https://gasstation.polygon.technology/amoy').then(res => res.json());
+
+            // Extract gas fees (choose between safeLow, standard, or fast based on your need)
+            const maxPriorityFeePerGas = ethers.parseUnits(gasFees.standard.maxPriorityFee.toString(), 'gwei');
+            const maxFeePerGas = ethers.parseUnits(gasFees.standard.maxFee.toString(), 'gwei');
+
+            console.log("Gas fees:", { maxPriorityFeePerGas, maxFeePerGas });
+
+            // Fetch and log the nonce before sending the transaction
+            const nonce = await provider.getTransactionCount(walletAddress, "latest");
+            console.log("Nonce:", nonce);
+
+            // Send transaction with gas fees and wager amount in wei
             const tx = await chessBettingContract.joinGame(contractGameId, {
-                value: wagerAmountInEther,
+                value: wagerAmountInWei,
+                nonce: nonce,
+                maxPriorityFeePerGas,
+                maxFeePerGas,
+                gasLimit: 3000000n // Estimated gas limit (can adjust based on contract needs)
             });
 
             console.log("Transaction sent, waiting for confirmation...");

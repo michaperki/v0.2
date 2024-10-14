@@ -288,15 +288,31 @@ const triggerFundDistribution = async (gameId: string, event: any) => {
 
     if (!response.ok) throw new Error('Failed to distribute funds');
 
+    const { payoutAmountInMatic } = await response.json();  // Wait for the payout amount
+
+    if (!payoutAmountInMatic) {
+      throw new Error('Payout amount is undefined');
+    }
+
     connection.fundsDistributed = true;  // Mark as distributed
-    console.log(`Funds successfully distributed for game ${gameId}`);
+    console.log(`Funds distributed for game ${gameId}. Payout: ${payoutAmountInMatic} MATIC`);
+
+    // Notify players about the result and fund distribution
+    broadcastToGame(gameId, {
+      type: 'funds-distributed',
+      gameId,
+      winner,
+      message: `Game ${gameId}: You won ${payoutAmountInMatic} MATIC (AMOY)!`,
+    });
+
+    console.log(`Notification sent to both players for game ${gameId}`);
+
   } catch (error) {
     console.error('Error distributing funds:', error);
   } finally {
     connection.isExecuting = false;
   }
 };
-
 
 const fetchGameDetails = async (lichessGameId: string) => {
   const lichessApiUrl = `https://lichess.org/api/game/${lichessGameId}`;
