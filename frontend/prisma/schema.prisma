@@ -1,46 +1,40 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
 model User {
-  id            Int      @id @default(autoincrement())
-  lichessId     String   @unique
-  accessToken   String
-  walletAddress String   @unique
-  createdAt     DateTime @default(now())
-
-  // Relations to Game (as player1 or player2)
-  gamesAsPlayer1 Game[] @relation("Player1Games")
-  gamesAsPlayer2 Game[] @relation("Player2Games")
-
-  // Relation to games where the user is the winner
-  gamesWon       Game[] @relation("GameWinner")
-
-  // Add your existing Pairing relations back if needed
+  id             Int      @id @default(autoincrement())
+  lichessId      String   @unique
+  accessToken    String
+  walletAddress  String   @unique
+  createdAt      DateTime @default(now())
+  gamesAsPlayer1 Game[]   @relation("Player1Games")
+  gamesAsPlayer2 Game[]   @relation("Player2Games")
+  gamesWon       Game[]   @relation("GameWinner")
 }
 
 model Game {
-  id            Int      @id @default(autoincrement())
-  contractGameId Int?
-  lichessGameId  String?
-  player1        User     @relation("Player1Games", fields: [player1Id], references: [id])
-  player1Id      Int
-  player2        User?    @relation("Player2Games", fields: [player2Id], references: [id])
-  player2Id      Int?
-  wagerAmount    BigInt
-  isActive       Boolean  @default(false) // Becomes true when second player joins
+  id              Int      @id @default(autoincrement())
+  contractGameId  Int?
+  lichessGameId   String?
+  player1         User     @relation("Player1Games", fields: [player1Id], references: [id])
+  player1Id       Int
+  player2         User?    @relation("Player2Games", fields: [player2Id], references: [id])
+  player2Id       Int?
+  wagerAmount     BigInt
+  isActive        Boolean  @default(false)
+  winner          User?    @relation("GameWinner", fields: [winnerId], references: [id])
+  winnerId        Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  // Relation to winner
-  winner         User?    @relation("GameWinner", fields: [winnerId], references: [id])
-  winnerId       Int?
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  // New fields for transaction details
+  transactionHash String?  // To store the transaction hash
+  payoutAmount    BigInt?   // To store the payout amount
 }
-

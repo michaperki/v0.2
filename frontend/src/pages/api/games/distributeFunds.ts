@@ -88,13 +88,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('Transaction confirmed');
 
-    // Update the game status in the database to store the user ID of the winner
+    // Update the game status in the database to store the transaction hash and payout amount
     await prisma.game.update({
       where: { id: game.id },
       data: {
         winner: {
-          connect: { id: winnerUserId }, // Use connect to link the winner by user ID
+          connect: { id: winnerUserId }, // Connect the winner by user ID
         },
+        transactionHash: receipt.hash,  // Store the transaction hash
+        payoutAmount: payoutAmount,  // Store the payout amount in BigInt
       },
     });
 

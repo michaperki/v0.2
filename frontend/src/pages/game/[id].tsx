@@ -38,11 +38,13 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
             };
         }
 
+        // Ensure BigInt and Date values are serialized properly
         return {
             props: {
                 game: {
                     ...game,
-                    wagerAmount: game.wagerAmount.toString(),
+                    wagerAmount: game.wagerAmount ? game.wagerAmount.toString() : null,
+                    payoutAmount: game.payoutAmount ? game.payoutAmount.toString() : null,
                     createdAt: game.createdAt.toISOString(),
                     updatedAt: game.updatedAt.toISOString(),
                 },
@@ -53,3 +55,4 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
         await prisma.$disconnect(); // Ensure Prisma disconnects after the operation
     }
 };
+

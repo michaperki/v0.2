@@ -1,0 +1,36 @@
+
+/* File: components/home/game-section/wager-wagers/styles.module.css */
+
+.wagers {
+  margin-top: 20px;
+}
+
+.wagersTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background-color: #333; /* Dark background for entire table */
+  color: #fff; /* Light text for readability */
+}
+
+.wagersTable th,
+.wagersTable td {
+  padding: 12px;
+  border: 1px solid #444; /* Darker border to match dark theme */
+  text-align: left;
+}
+
+.wagersTable th {
+  background-color: #444; /* Darker header background */
+  font-weight: bold;
+}
+
+.wagersTable tbody tr {
+  background-color: #333; /* Ensure all rows have the same dark background */
+}
+
+.wagersTable tbody tr:hover {
+  background-color: #555; /* Slightly lighter background on hover */
+  transition: background-color 0.3s ease;
+}
+

@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import styles from './styles.module.css';
 import { useWallet } from '@/hooks/useWallet';
 import Cookies from 'js-cookie';
+import Wagers from './wagers';
+
 
 export default function GameSection() {
     const [wagerToPost, setWagerToPost] = useState("");
@@ -133,6 +135,9 @@ export default function GameSection() {
                     {isSending ? "Processing..." : "Play Game"}
                 </button>
             </div>
+
+            {/* Display the user's wager history below the game section */}
+            {walletAddress && <Wagers walletAddress={walletAddress} />}  {/* Pass walletAddress as userId */}
         </div>
     );
 }
