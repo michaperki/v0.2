@@ -113,12 +113,25 @@ contract ChessBetting {
         game.isActive = false;
         game.winner = winner;
 
-        // Payout the winnings to the winner
-        uint256 payoutAmount = escrow[gameId];
-        escrow[gameId] = 0;
-        payable(winner).transfer(payoutAmount);
+        // Calculate the total payout amount from the escrow
+        uint256 totalPayout = escrow[gameId];
 
-        emit GameResult(gameId, winner, payoutAmount);
+        // Calculate the 5% fee for the owner
+        uint256 feeAmount = (totalPayout * 5) / 100;
+
+        // Calculate the remaining payout for the winner
+        uint256 winnerPayout = totalPayout - feeAmount;
+
+        // Reset the escrow for the game
+        escrow[gameId] = 0;
+
+        // Transfer the 5% fee to the owner
+        payable(owner).transfer(feeAmount);
+
+        // Transfer the remaining payout to the winner
+        payable(winner).transfer(winnerPayout);
+
+        emit GameResult(gameId, winner, winnerPayout);
     }
 
     /**

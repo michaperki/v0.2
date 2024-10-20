@@ -1,0 +1,25 @@
+
+.resultContainer {
+    padding: 2rem;
+    border-radius: 8px;
+}
+
+.resultTitle {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.resultText {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.link {
+    color: #0070f3;
+    text-decoration: none;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+

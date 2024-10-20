@@ -49,8 +49,8 @@ export default function GameComponent({ game }: { game: any }) {
                 setLichessGameId(message.lichessGameId);
             }
 
-            if (message.type === 'game-over') {
-                console.log('Game over:', message.event);
+            if (message.type === 'game-finished') {
+                router.push(`/game/${gameId}/result`);
             }
         };
 
