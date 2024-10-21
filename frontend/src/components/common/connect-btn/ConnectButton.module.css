@@ -1,0 +1,16 @@
+
+/* Wallet Section Styles */
+
+/* Parent container around the button */
+.connectWallet {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  border-radius: 25px;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.10) 100%), #0C0C0C;
+  margin-bottom: 20px;
+
+}
+

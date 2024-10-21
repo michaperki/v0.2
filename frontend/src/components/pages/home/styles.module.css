@@ -1,29 +1,50 @@
+
+/* Header.module.css */
 .home {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
-  grid-gap: 20px; /* Gap between columns */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 20px;
 }
 
+/* First column for logo */
 .col1 {
-  grid-column: 1; /* First column */
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
 }
 
+/* Second column for wallet auth status */
 .col2 {
-  grid-column: 2; /* Second column */
+  flex: 1;
+  display: flex;
+  justify-content: center;
 }
 
+/* Third column for Lichess auth status */
 .col3 {
-  grid-column: 3; /* Third column */
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
 }
 
-@media (max-width: 768px) {
-  /* Stack columns on smaller screens */
-  .home {
-    grid-template-columns: 1fr; /* One column layout */
-  }
-
-  .col1, .col2, .col3 {
-    grid-column: auto;
-  }
+/* Unauthenticated (red) */
+.unauthenticated {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  padding: 10px;
+  border-radius: 5px;
+  text-align: center;
 }
+
+/* Authenticated (green) */
+.authenticated {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+  padding: 10px;
+  border-radius: 5px;
+  text-align: center;
+}
+

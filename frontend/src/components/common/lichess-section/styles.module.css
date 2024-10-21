@@ -5,7 +5,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin-top: 20px;
+    margin: 0; /* Remove top margin to fit in smaller space */
+    padding: 10px; /* Add padding for better spacing */
+    width: 100%; /* Ensure it takes full width */
 }
 
 /* Styling for the inner container */
@@ -14,36 +16,45 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin-top: 20px;
+    margin: 0; /* Remove excess margin */
+    padding: 5px; /* Reduce padding */
 }
 
 /* Heading styling */
 .lichessSectionInner .heading {
-    font-size: 1.5rem;
+    font-size: 1.2rem; /* Decrease font size for smaller space */
 }
 
 /* Divider between sections */
 .lichessSectionInner .divider {
-    width: 100%;
+    width: 80%; /* Reduce width of divider */
     height: 1px;
     background-color: #e0e0e0;
-    margin-top: 10px;
-    margin-bottom: 10px;
+    margin: 5px 0; /* Reduce margin around divider */
 }
 
 /* Button styling */
 .button {
     background-color: #4CAF50;
     color: white;
-    padding: 10px 20px;
+    padding: 8px 16px; /* Decrease padding for smaller button */
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 0.9rem; /* Adjust font size */
     transition: background-color 0.3s ease;
-    margin-bottom: 10px;
+    margin-bottom: 5px; /* Reduce margin */
 }
 
 .button:hover {
     background-color: #45a049;
 }
+
+/* Error message styling */
+.error {
+    color: red;
+    font-size: 0.9rem; /* Smaller font size */
+    text-align: center;
+    margin-bottom: 5px;
+}
+

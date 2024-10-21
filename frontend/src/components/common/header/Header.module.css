@@ -1,0 +1,87 @@
+
+/* Modify header columns to fit the sections better */
+.home {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background-color: #000;
+}
+
+/* Adjust to allow more flexibility */
+.col1, .col2, .col3 {
+  flex: 1;
+  min-width: 200px; /* Adjust this to a reasonable width */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  height: auto; /* Auto height to avoid overflow */
+}
+
+/* Lichess section should fit better now */
+.lichessSectionInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%; /* Take up full width inside the column */
+}
+
+
+.home {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background-color: #000;
+}
+
+/* First column for logo */
+.col1 {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* Second and third columns take equal space */
+.col2, .col3 {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 250px;
+  padding: 10px;
+  height: 100px;
+}
+
+/* Status boxes should have a tinted background */
+.statusBox {
+  background-color: rgba(255, 255, 255, 0.10); /* Adjust the tinting */
+  padding: 15px;
+  border-radius: 8px; /* Add border radius for better UI */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add subtle shadow */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%; /* Ensure it takes full width */
+  height: 100%;
+}
+
+.authenticated, .unauthenticated {
+  padding: 10px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.authenticated {
+  background-color: rgba(0, 255, 0, 0.1); /* Tinted green */
+}
+
+.unauthenticated {
+  background-color: rgba(255, 0, 0, 0.1); /* Tinted red */
+}

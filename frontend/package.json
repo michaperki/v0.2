@@ -7,7 +7,9 @@
     "prisma:generate": "prisma generate",
     "build": "npm run prisma:generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "prisma:dev": "dotenv -c .env.local -- npx prisma migrate dev",
+    "prisma:prod": "dotenv -c .env.production -- npx prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
@@ -29,6 +31,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "cookies": "^0.9.1",
+    "dotenv-cli": "^7.4.2",
     "eslint": "^8",
     "eslint-config-next": "14.0.1",
     "js-cookie": "^3.0.5",

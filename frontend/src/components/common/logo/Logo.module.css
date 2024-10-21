@@ -1,0 +1,32 @@
+
+.logoContainer {
+    display: flex;
+    flex-direction: column; /* Stack the image and text vertically */
+    justify-content: center;
+    align-items: center;
+    width: 100px; /* Set desired width */
+    height: auto; /* Allow height to adjust based on content */
+    border-radius: 50%; /* Makes it circular */
+    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth scaling and shadow effect */
+    cursor: pointer;
+}
+
+.logoContainer:hover {
+    transform: scale(1.05); /* Slight scaling effect on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow on hover */
+}
+
+.logoImage {
+    width: 90%; /* Adjust logo image size */
+    height: auto;
+}
+
+/* Styling for the "Blitz" text */
+.logoText {
+    margin-top: 8px; /* Add space between the logo and text */
+    font-size: 1.2rem; /* Adjust font size */
+    font-weight: bold; /* Make the text bold */
+    color: #ffffff; /* Match the text color with the logo's color scheme */
+    text-transform: uppercase; /* Optional: Make the text uppercase for emphasis */
+}
+

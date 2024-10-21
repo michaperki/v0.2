@@ -1,11 +1,9 @@
 
 import { useState, useEffect } from "react";
-import WalletSection from "@/components/common/wallet-section";
 import styles from "./styles.module.css";
 import { useWallet } from "@/hooks/useWallet";
 import InfoSection from "./info-section";
 import GameSection from "./game-section";
-import LichessSection from "./lichess-section";
 import useSWR from "swr";
 
 // SWR fetcher for data
@@ -30,21 +28,11 @@ export default function Home() {
 
   return (
     <div className={styles.home}>
-      <section className={styles.col1}>
-        <WalletSection />
-      </section>
-
-        <section className={styles.col2}>
-            {walletConnectionStatus === "connected" && isAuthenticated && lichessConnected ? (
-                <GameSection />
-            ) : (
-                <InfoSection />
-            )}
-        </section>
-
-        <section className={styles.col3}>
-            <LichessSection />
-        </section>
+        {walletConnectionStatus === "connected" && isAuthenticated && lichessConnected ? (
+            <GameSection />
+        ) : (
+            <InfoSection />
+        )}
     </div>
     );
 }

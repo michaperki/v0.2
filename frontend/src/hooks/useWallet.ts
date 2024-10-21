@@ -57,6 +57,11 @@ export const useWallet = () => {
                 Cookies.set("lichess_id", lichessId.toString(), { sameSite: "lax" });
             }
 
+            if (walletAddress) {
+                // Store the wallet address in cookies for later use
+                Cookies.set("wallet_address", walletAddress, { sameSite: "lax" });
+            }
+
         } catch (error) {
             console.error("Error fetching user data:", error);
         }

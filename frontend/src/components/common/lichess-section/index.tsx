@@ -7,13 +7,12 @@ import styles from "./styles.module.css";
 
 export default function LichessSection() {
   const router = useRouter();
-  const { walletConnectionStatus } = useWallet(); // Access wallet connection status
+  const { walletConnectionStatus } = useWallet();
   const [lichessData, setLichessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check for an error in the query string
     if (router.query.error) {
       setError(decodeURIComponent(router.query.error as string));
     }
@@ -60,37 +59,32 @@ export default function LichessSection() {
     return <div>Loading...</div>;
   }
 
-    return (
-      <div className={styles.lichessSection}>
-        {error && (
-          <div className={styles.error}>
-            <p>Error: {error}</p>
-          </div>
-        )}
+  return (
+    <div className={styles.lichessSection}>
+      {error && (
+        <div className={styles.error}>
+          <p>Error: {error}</p>
+        </div>
+      )}
 
-        {/* Show wallet connection status first */}
-        {walletConnectionStatus !== "connected" ? (
-          <div className={styles.lichessSectionInner}>
-            <p>Connect your wallet to start playing.</p>
-            {/* You can add the wallet connection component here if needed */}
-          </div>
-        ) : !lichessData ? (
-          <div className={styles.lichessSectionInner}>
-            <p>You are not logged in to Lichess.</p>
-            <hr className={styles.divider} />
-            {/* Only show the Lichess login button if the wallet is connected */}
-            <button className={styles.button} onClick={initiateLichessLogin}>
-              Login to Lichess
-            </button>
-          </div>
-        ) : (
-          <div className={styles.lichessSectionInner}>
-            <h1>{lichessData.username}</h1>
-            <p>Rating: {lichessData.perfs.rapid.rating}</p>
-            <div className={styles.divider} />
-          </div>
-        )}
-      </div>
-    );
+      {walletConnectionStatus !== "connected" ? (
+        <div className={styles.lichessSectionInner}>
+          <p>Connect your wallet to start playing.</p>
+        </div>
+      ) : !lichessData ? (
+        <div className={styles.lichessSectionInner}>
+          <button className={styles.button} onClick={initiateLichessLogin}>
+            Login to Lichess
+          </button>
+        </div>
+      ) : (
+        <div className={styles.lichessSectionInner}>
+          <h1>{lichessData.username}</h1>
+          <p>Rating: {lichessData.perfs.rapid.rating}</p>
+          <div className={styles.divider} />
+        </div>
+      )}
+    </div>
+  );
 }
 
